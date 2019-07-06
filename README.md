@@ -142,7 +142,7 @@ def start[Msg, State](
 It requires:
 - the `name` of the entity type. Entities will be distributed on all the nodes of the cluster where `start` was called with this `name`.
 - `onMessage` is the behavior of the sharded entity. For each received message, it will run an effect of type `ZIO[Entity[State], Nothing, Unit]`:
-    - `Entity[State]` gives you access to a `Ref[Option[State]]` which you can use to read or modify the state of the entity. The state is set to `None` when the entity is started. This `Entity` object also allows you to stop the entity from within (e.g. after some time of inactivity).
+    - `Entity[State]` gives you access to a `Ref[Option[State]]` which you can use to read or modify the state of the entity. The state is set to `None` when the entity is started. This `Entity` object also allows you to get the entity ID and to stop the entity from within (e.g. after some time of inactivity).
     - `Nothing` means the effect should not fail, you must catch and handle potential errors
     - `Unit` means the effect should not return anything
 - `numberOfShards` indicates how entities will be split across nodes. See [this page](https://doc.akka.io/docs/akka/current/cluster-sharding.html#an-example) for more information.

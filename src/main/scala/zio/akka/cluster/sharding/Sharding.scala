@@ -65,7 +65,7 @@ object Sharding {
    * @param numberOfShards a fixed number of shards
    * @return a [[Sharding]] object that can be used to send messages to sharded entities on other nodes
    */
-  def startProxy[Msg, State](
+  def startProxy[Msg](
     name: String,
     role: Option[String],
     numberOfShards: Int = 100
@@ -112,6 +112,7 @@ object Sharding {
     val ref: Ref[Option[State]]    = rts.unsafeRun(Ref.make[Option[State]](None))
     val actorContext: ActorContext = context
     val entity: Entity[State] = new Entity[State] {
+      override def id: String                = context.self.path.name
       override def state: Ref[Option[State]] = ref
       override def stop: UIO[Unit]           = UIO(actorContext.stop(self))
     }
