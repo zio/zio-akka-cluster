@@ -24,8 +24,8 @@ developers := List(
 )
 
 libraryDependencies ++= Seq(
-  "dev.zio"           %% "zio"                   % "1.0.0-RC9",
-  "dev.zio"           %% "zio-streams"           % "1.0.0-RC9",
+  "dev.zio"           %% "zio"                   % "1.0.0-RC10-1",
+  "dev.zio"           %% "zio-streams"           % "1.0.0-RC10-1",
   "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.23",
   "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.23",
   "org.scalatest"     %% "scalatest"             % "3.0.8" % "test",
