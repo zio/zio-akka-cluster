@@ -30,7 +30,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.23",
   "org.scalatest"     %% "scalatest"             % "3.0.8" % "test",
   compilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
-  compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.0")
+  compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
 )
 
 scalacOptions ++= Seq(
