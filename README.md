@@ -47,9 +47,10 @@ To monitor the cluster and be informed of changes (e.g. new members, member unre
 This functions returns a ZIO `Queue` that will be populated with the cluster events as they happen.
 The returned queue is unbounded, but if you want to supply your own bounded queue, use `Cluster.clusterEventsWith`.
 To unsubscribe, simply `shutdown` the queue.
+`initialStateAsEvents` indicates if you want to receive previous cluster events leading to the current state, or only future events.
 
 ```scala
-val clusterEvents: ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]]
+def clusterEvents(initialStateAsEvents: Boolean = false): ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]]
 ```
 
 Finally, you can leave the current cluster using `Cluster.leave`.
