@@ -1,7 +1,13 @@
 package zio.akka.cluster
 
 import akka.actor.{ Actor, ActorSystem, Address, PoisonPill, Props }
-import akka.cluster.ClusterEvent.{ ClusterDomainEvent, CurrentClusterState }
+import akka.cluster.ClusterEvent.{
+  ClusterDomainEvent,
+  CurrentClusterState,
+  InitialStateAsEvents,
+  InitialStateAsSnapshot,
+  SubscriptionInitialStateMode
+}
 import zio.Exit.{ Failure, Success }
 import zio.{ Queue, Runtime, Task, ZIO }
 
@@ -42,26 +48,34 @@ object Cluster {
 
   /**
    *  Subscribes to the current cluster events. It returns an unbounded queue that will be fed with cluster events.
+   *  `initialStateAsEvents` indicates if you want to receive previous cluster events leading to the current state, or only future events.
    *  To unsubscribe, use `queue.shutdown`.
    *  To use a bounded queue, see `clusterEventsWith`.
    */
-  val clusterEvents: ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]] =
-    Queue.unbounded[ClusterDomainEvent].tap(clusterEventsWith)
+  def clusterEvents(initialStateAsEvents: Boolean = false): ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]] =
+    Queue.unbounded[ClusterDomainEvent].tap(clusterEventsWith(_, initialStateAsEvents))
 
   /**
    *  Subscribes to the current cluster events, using the provided queue to push the events.
+   *  `initialStateAsEvents` indicates if you want to receive previous cluster events leading to the current state, or only future events.
    *  To unsubscribe, use `queue.shutdown`.
    */
-  def clusterEventsWith(queue: Queue[ClusterDomainEvent]): ZIO[ActorSystem, Throwable, Unit] =
+  def clusterEventsWith(queue: Queue[ClusterDomainEvent],
+                        initialStateAsEvents: Boolean = false): ZIO[ActorSystem, Throwable, Unit] =
     for {
       rts         <- Task.runtime[Any]
       actorSystem <- ZIO.environment[ActorSystem]
-      _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue))))
+      _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 
-  private[cluster] class SubscriberActor(rts: Runtime[Any], queue: Queue[ClusterDomainEvent]) extends Actor {
+  private[cluster] class SubscriberActor(rts: Runtime[Any],
+                                         queue: Queue[ClusterDomainEvent],
+                                         initialStateAsEvents: Boolean)
+      extends Actor {
 
-    akka.cluster.Cluster(context.system).subscribe(self, classOf[ClusterDomainEvent])
+    val initialState: SubscriptionInitialStateMode =
+      if (initialStateAsEvents) InitialStateAsEvents else InitialStateAsSnapshot
+    akka.cluster.Cluster(context.system).subscribe(self, initialState, classOf[ClusterDomainEvent])
 
     def receive: PartialFunction[Any, Unit] = {
       case ev: ClusterDomainEvent =>

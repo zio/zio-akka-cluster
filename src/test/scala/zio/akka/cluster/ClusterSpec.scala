@@ -33,7 +33,7 @@ class ClusterSpec extends FlatSpec with Matchers with DefaultRuntime {
       actorSystem.use(
         actorSystem =>
           (for {
-            queue <- Cluster.clusterEvents
+            queue <- Cluster.clusterEvents()
             _     <- Cluster.leave
             item  <- queue.take
           } yield item).provide(actorSystem)
