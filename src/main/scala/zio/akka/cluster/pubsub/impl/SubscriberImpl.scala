@@ -13,7 +13,7 @@ private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
 
   override def listenWith(topic: String, queue: Queue[A], group: Option[String] = None): Task[Unit] =
     for {
-      rts        <- Task.runtime[Any]
+      rts        <- Task.runtime
       subscribed <- Promise.make[Nothing, Unit]
       _ <- Task(
             getActorSystem.actorOf(Props(new SubscriberActor[A](getMediator, topic, group, rts, queue, subscribed)))
