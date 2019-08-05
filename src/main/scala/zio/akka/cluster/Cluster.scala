@@ -60,18 +60,21 @@ object Cluster {
    *  `initialStateAsEvents` indicates if you want to receive previous cluster events leading to the current state, or only future events.
    *  To unsubscribe, use `queue.shutdown`.
    */
-  def clusterEventsWith(queue: Queue[ClusterDomainEvent],
-                        initialStateAsEvents: Boolean = false): ZIO[ActorSystem, Throwable, Unit] =
+  def clusterEventsWith(
+    queue: Queue[ClusterDomainEvent],
+    initialStateAsEvents: Boolean = false
+  ): ZIO[ActorSystem, Throwable, Unit] =
     for {
-      rts         <- Task.runtime[Any]
+      rts         <- Task.runtime
       actorSystem <- ZIO.environment[ActorSystem]
       _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 
-  private[cluster] class SubscriberActor(rts: Runtime[Any],
-                                         queue: Queue[ClusterDomainEvent],
-                                         initialStateAsEvents: Boolean)
-      extends Actor {
+  private[cluster] class SubscriberActor(
+    rts: Runtime[Any],
+    queue: Queue[ClusterDomainEvent],
+    initialStateAsEvents: Boolean
+  ) extends Actor {
 
     val initialState: SubscriptionInitialStateMode =
       if (initialStateAsEvents) InitialStateAsEvents else InitialStateAsSnapshot
