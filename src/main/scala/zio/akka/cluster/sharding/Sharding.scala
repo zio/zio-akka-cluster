@@ -52,10 +52,9 @@ object Sharding {
                            }
                          )
                        )
-    } yield
-      new ShardingImpl[Msg] {
-        override val getShardingRegion: ActorRef = shardingRegion
-      }
+    } yield new ShardingImpl[Msg] {
+      override val getShardingRegion: ActorRef = shardingRegion
+    }
 
   /**
    *  Starts cluster sharding in proxy mode for a given entity type.
@@ -89,10 +88,9 @@ object Sharding {
                            }
                          )
                        )
-    } yield
-      new ShardingImpl[Msg] {
-        override val getShardingRegion: ActorRef = shardingRegion
-      }
+    } yield new ShardingImpl[Msg] {
+      override val getShardingRegion: ActorRef = shardingRegion
+    }
 
   private[sharding] trait ShardingImpl[Msg] extends Sharding[Msg] {
 

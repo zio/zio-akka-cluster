@@ -90,7 +90,7 @@ class ShardingSpec extends FlatSpec with Matchers with DefaultRuntime {
                 case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
                 case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
                 case "die" => ZIO.accessM[Entity[Unit]](_.stop)
-            }
+              }
             sharding <- Sharding.start(shardName, onMessage).provide(sys)
             _        <- sharding.send(shardId, "set")
             _        <- sharding.send(shardId, "die")

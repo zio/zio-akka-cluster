@@ -39,10 +39,9 @@ object PubSub {
     for {
       actorSystem <- ZIO.environment[ActorSystem]
       mediator    <- getMediator(actorSystem)
-    } yield
-      new Publisher[A] with PublisherImpl[A] {
-        override val getMediator: ActorRef = mediator
-      }
+    } yield new Publisher[A] with PublisherImpl[A] {
+      override val getMediator: ActorRef = mediator
+    }
 
   /**
    *  Creates a new `Subscriber[A]`.
@@ -51,11 +50,10 @@ object PubSub {
     for {
       actorSystem <- ZIO.environment[ActorSystem]
       mediator    <- getMediator(actorSystem)
-    } yield
-      new Subscriber[A] with SubscriberImpl[A] {
-        override val getActorSystem: ActorSystem = actorSystem
-        override val getMediator: ActorRef       = mediator
-      }
+    } yield new Subscriber[A] with SubscriberImpl[A] {
+      override val getActorSystem: ActorSystem = actorSystem
+      override val getMediator: ActorRef       = mediator
+    }
 
   /**
    *  Creates a new `PubSub[A]`.
@@ -64,10 +62,9 @@ object PubSub {
     for {
       actorSystem <- ZIO.environment[ActorSystem]
       mediator    <- getMediator(actorSystem)
-    } yield
-      new PubSub[A] with PublisherImpl[A] with SubscriberImpl[A] {
-        override val getActorSystem: ActorSystem = actorSystem
-        override val getMediator: ActorRef       = mediator
-      }
+    } yield new PubSub[A] with PublisherImpl[A] with SubscriberImpl[A] {
+      override val getActorSystem: ActorSystem = actorSystem
+      override val getMediator: ActorRef       = mediator
+    }
 
 }
