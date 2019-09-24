@@ -15,7 +15,7 @@ The following features are available:
 To use `zio-akka-cluster`, add the following line in your `build.sbt` file:
 
 ```
-libraryDependencies += "dev.zio" %% "zio-akka-cluster" % "0.1.2"
+libraryDependencies += "dev.zio" %% "zio-akka-cluster" % "0.1.4"
 ```
 
 ## How to use
