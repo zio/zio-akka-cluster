@@ -39,7 +39,8 @@ object ClusterSpec
                   _     <- Cluster.leave
                   item  <- queue.take
                 } yield item).provide(actorSystem)
-            ), isSubtype[MemberLeft](anything)
+            ),
+            isSubtype[MemberLeft](anything)
           )
         }
       )

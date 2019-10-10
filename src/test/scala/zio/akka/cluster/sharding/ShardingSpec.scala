@@ -24,52 +24,59 @@ object ShardingSpec
                   _         <- sharding.send(shardId, msg)
                   res       <- p.await
                 } yield res
-            ), equalTo(msg)
+            ),
+            equalTo(msg)
           )
         },
         testM("gather state") {
           assertM(
-            actorSystem.use { sys =>
-              for {
-                p <- Promise.make[Nothing, Boolean]
-                onMessage = (_: String) =>
-                  for {
-                    state <- ZIO.access[Entity[Int]](_.state)
-                    newState <- state.update {
-                                case None    => Some(1)
-                                case Some(x) => Some(x + 1)
-                              }
-                    _ <- ZIO.when(newState.contains(3))(p.succeed(true)) // complete the promise after the 3rd message
-                  } yield ()
-                sharding  <- Sharding.start(shardName, onMessage).provide(sys)
-                _         <- sharding.send(shardId, msg)
-                _         <- sharding.send(shardId, msg)
-                earlyPoll <- p.poll
-                _         <- sharding.send(shardId, msg)
-                res       <- p.await
-              } yield (earlyPoll, res)
-            }, equalTo[(Option[zio.IO[Nothing, Boolean]], Boolean)]((None, true))
+            actorSystem.use {
+              sys =>
+                for {
+                  p <- Promise.make[Nothing, Boolean]
+                  onMessage = (_: String) =>
+                    for {
+                      state <- ZIO.access[Entity[Int]](_.state)
+                      newState <- state.update {
+                                   case None    => Some(1)
+                                   case Some(x) => Some(x + 1)
+                                 }
+                      _ <- ZIO.when(newState.contains(3))(p.succeed(true)) // complete the promise after the 3rd message
+                    } yield ()
+                  sharding  <- Sharding.start(shardName, onMessage).provide(sys)
+                  _         <- sharding.send(shardId, msg)
+                  _         <- sharding.send(shardId, msg)
+                  earlyPoll <- p.poll
+                  _         <- sharding.send(shardId, msg)
+                  res       <- p.await
+                } yield (earlyPoll, res)
+            },
+            equalTo[(Option[zio.IO[Nothing, Boolean]], Boolean)]((None, true))
           )
         },
         testM("kill itself") {
           assertM(
-            actorSystem.use { sys =>
-              for {
-                p <- Promise.make[Nothing, Option[Unit]]
-                onMessage = (msg: String) =>
-                  msg match {
-                    case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
-                    case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
-                    case "die" => ZIO.accessM[Entity[Unit]](_.stop)
-                  }
-                sharding <- Sharding.start(shardName, onMessage).provide(sys)
-                _        <- sharding.send(shardId, "set")
-                _        <- sharding.send(shardId, "die")
-                _        <- ZIO.sleep(3 seconds).provide(Clock.Live) // give time to the ShardCoordinator to notice the death of the actor and recreate one
-                _        <- sharding.send(shardId, "get")
-                res      <- p.await
-              } yield res
-            }, isNone
+            actorSystem.use {
+              sys =>
+                for {
+                  p <- Promise.make[Nothing, Option[Unit]]
+                  onMessage = (msg: String) =>
+                    msg match {
+                      case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
+                      case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
+                      case "die" => ZIO.accessM[Entity[Unit]](_.stop)
+                    }
+                  sharding <- Sharding.start(shardName, onMessage).provide(sys)
+                  _        <- sharding.send(shardId, "set")
+                  _        <- sharding.send(shardId, "die")
+                  _ <- ZIO
+                        .sleep(3 seconds)
+                        .provide(Clock.Live) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+                  _   <- sharding.send(shardId, "get")
+                  res <- p.await
+                } yield res
+            },
+            isNone
           )
         },
         testM("work with 2 actor systems") {
@@ -88,7 +95,8 @@ object ShardingSpec
                   _          <- p1.await
                   _          <- p2.await
                 } yield ()
-            }, isUnit
+            },
+            isUnit
           )
         }
       ),
@@ -119,25 +127,23 @@ object ShardingSpecUtil {
   val actorSystem: Managed[Throwable, ActorSystem] =
     Managed.make(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
 
-
   val config2: Config = ConfigFactory.parseString(s"""
-                                                    |akka {
-                                                    |  actor {
-                                                    |    provider = "cluster"
-                                                    |  }
-                                                    |  remote {
-                                                    |    netty.tcp {
-                                                    |      hostname = "127.0.0.1"
-                                                    |      port = 2552
-                                                    |    }
-                                                    |  }
-                                                    |  cluster {
-                                                    |    seed-nodes = ["akka.tcp://Test@127.0.0.1:2551"]
-                                                    |    jmx.multi-mbeans-in-same-jvm = on
-                                                    |  }
-                                                    |}
+                                                     |akka {
+                                                     |  actor {
+                                                     |    provider = "cluster"
+                                                     |  }
+                                                     |  remote {
+                                                     |    netty.tcp {
+                                                     |      hostname = "127.0.0.1"
+                                                     |      port = 2552
+                                                     |    }
+                                                     |  }
+                                                     |  cluster {
+                                                     |    seed-nodes = ["akka.tcp://Test@127.0.0.1:2551"]
+                                                     |    jmx.multi-mbeans-in-same-jvm = on
+                                                     |  }
+                                                     |}
       """.stripMargin)
-
 
   val actorSystem2: Managed[Throwable, ActorSystem] =
     Managed.make(Task(ActorSystem("Test", config2)))(sys => Task.fromFuture(_ => sys.terminate()).either)
