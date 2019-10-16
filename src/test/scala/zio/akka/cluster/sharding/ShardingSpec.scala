@@ -3,12 +3,12 @@ package zio.akka.cluster.sharding
 import scala.language.postfixOps
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
+import zio.akka.cluster.sharding.ShardingSpecUtil._
 import zio.clock.Clock
 import zio.duration._
-import zio.{ Managed, Promise, Task, ZIO }
-import zio.akka.cluster.sharding.ShardingSpecUtil._
 import zio.test.Assertion._
 import zio.test._
+import zio.{ Promise, ZIO }
 
 object ShardingSpec
     extends DefaultRunnableSpec(
@@ -51,7 +51,7 @@ object ShardingSpec
                   res       <- p.await
                 } yield (earlyPoll, res)
             },
-            equalTo[(Option[zio.IO[Nothing, Boolean]], Boolean)]((None, true))
+            equalTo((None, true))
           )
         },
         testM("kill itself") {

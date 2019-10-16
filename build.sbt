@@ -24,12 +24,12 @@ developers := List(
 )
 
 libraryDependencies ++= Seq(
-  "dev.zio"           %% "zio"                   % "1.0.0-RC14",
-  "dev.zio"           %% "zio-streams"           % "1.0.0-RC14",
+  "dev.zio"           %% "zio"                   % "1.0.0-RC15",
+  "dev.zio"           %% "zio-streams"           % "1.0.0-RC15",
   "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.25",
   "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.25",
-  "dev.zio"           %% "zio-test"              % "1.0.0-RC14" % "test",
-  "dev.zio"           %% "zio-test-sbt"          % "1.0.0-RC14" % "test",
+  "dev.zio"           %% "zio-test"              % "1.0.0-RC15" % "test",
+  "dev.zio"           %% "zio-test-sbt"          % "1.0.0-RC15" % "test",
   compilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
   compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
 )
