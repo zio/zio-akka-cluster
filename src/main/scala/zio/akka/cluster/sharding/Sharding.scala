@@ -34,7 +34,7 @@ object Sharding {
   ): ZIO[ActorSystem, Throwable, Sharding[Msg]] =
     for {
       rts         <- ZIO.runtime[ActorSystem]
-      actorSystem = rts.Environment
+      actorSystem = rts.environment
       shardingRegion <- Task(
                          ClusterSharding(actorSystem).start(
                            typeName = name,
@@ -71,7 +71,7 @@ object Sharding {
   ): ZIO[ActorSystem, Throwable, Sharding[Msg]] =
     for {
       rts         <- ZIO.runtime[ActorSystem]
-      actorSystem = rts.Environment
+      actorSystem = rts.environment
       shardingRegion <- Task(
                          ClusterSharding(actorSystem).startProxy(
                            typeName = name,
