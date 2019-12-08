@@ -1,5 +1,5 @@
-val mainScala = "2.12.8"
-val allScala  = Seq("2.11.12", mainScala)
+val mainScala = "2.13.1"
+val allScala  = Seq("2.11.12", "2.12.10", mainScala)
 
 organization := "dev.zio"
 homepage := Some(url("https://github.com/zio/zio-akka-cluster"))
@@ -43,7 +43,6 @@ scalacOptions ++= Seq(
   "-explaintypes",
   "-Yrangepos",
   "-feature",
-  "-Xfuture",
   "-language:higherKinds",
   "-language:existentials",
   "-unchecked",
@@ -59,7 +58,8 @@ scalacOptions ++= Seq(
       "-Ywarn-inaccessible",
       "-Ywarn-infer-any",
       "-Ywarn-nullary-override",
-      "-Ywarn-nullary-unit"
+      "-Ywarn-nullary-unit",
+      "-Xfuture"
     )
   case Some((2, 12)) =>
     Seq(
@@ -73,7 +73,8 @@ scalacOptions ++= Seq(
       "-Ywarn-nullary-unit",
       "-opt-inline-from:<source>",
       "-opt-warnings",
-      "-opt:l:inline"
+      "-opt:l:inline",
+      "-Xfuture"
     )
   case _ => Nil
 })
