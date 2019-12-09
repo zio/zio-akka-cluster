@@ -94,7 +94,8 @@ jobs:
           key: sbt-cache
       - run: echo -n "${PGP_PUBLIC}" | base64 -d > /tmp/public.asc
       - run: echo -n "${PGP_SECRET}" | base64 -d > /tmp/secret.asc
-      - run: sbt releaseEarly
+      - run: sbt ++2.12.10! releaseEarly
+      - run: sbt ++2.13.1! releaseEarly
 
 workflows:
   version: 2
