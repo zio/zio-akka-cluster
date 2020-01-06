@@ -32,13 +32,12 @@ object ClusterSpec
             Managed.make(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
 
           assertM(
-            actorSystem.use(
-              actorSystem =>
-                (for {
-                  queue <- Cluster.clusterEvents()
-                  _     <- Cluster.leave
-                  item  <- queue.take
-                } yield item).provide(actorSystem)
+            actorSystem.use(actorSystem =>
+              (for {
+                queue <- Cluster.clusterEvents()
+                _     <- Cluster.leave
+                item  <- queue.take
+              } yield item).provide(actorSystem)
             ),
             isSubtype[MemberLeft](anything)
           )

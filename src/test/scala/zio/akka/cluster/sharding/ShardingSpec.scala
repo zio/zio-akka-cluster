@@ -15,15 +15,14 @@ object ShardingSpec
       suite("ShardingSpec")(
         testM("send and receive a single message") {
           assertM(
-            actorSystem.use(
-              sys =>
-                for {
-                  p         <- Promise.make[Nothing, String]
-                  onMessage = (msg: String) => p.succeed(msg).unit
-                  sharding  <- Sharding.start(shardName, onMessage).provide(sys)
-                  _         <- sharding.send(shardId, msg)
-                  res       <- p.await
-                } yield res
+            actorSystem.use(sys =>
+              for {
+                p         <- Promise.make[Nothing, String]
+                onMessage = (msg: String) => p.succeed(msg).unit
+                sharding  <- Sharding.start(shardName, onMessage).provide(sys)
+                _         <- sharding.send(shardId, msg)
+                res       <- p.await
+              } yield res
             ),
             equalTo(msg)
           )
