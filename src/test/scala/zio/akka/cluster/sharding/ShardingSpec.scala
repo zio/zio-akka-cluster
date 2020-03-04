@@ -14,8 +14,7 @@ object ShardingSpec
     extends DefaultRunnableSpec(
       suite("ShardingSpec")(
         testM("send and receive a single message") {
-          assertM(
-            actorSystem.use(sys =>
+          assertM(actorSystem.use(sys =>
               for {
                 p         <- Promise.make[Nothing, String]
                 onMessage = (msg: String) => p.succeed(msg).unit
@@ -23,13 +22,10 @@ object ShardingSpec
                 _         <- sharding.send(shardId, msg)
                 res       <- p.await
               } yield res
-            ),
-            equalTo(msg)
-          )
+            ))(equalTo(msg))
         },
         testM("gather state") {
-          assertM(
-            actorSystem.use {
+          assertM(actorSystem.use {
               sys =>
                 for {
                   p <- Promise.make[Nothing, Boolean]
@@ -49,13 +45,10 @@ object ShardingSpec
                   _         <- sharding.send(shardId, msg)
                   res       <- p.await
                 } yield (earlyPoll, res)
-            },
-            equalTo((None, true))
-          )
+            })(equalTo((None, true)))
         },
         testM("kill itself") {
-          assertM(
-            actorSystem.use {
+          assertM(actorSystem.use {
               sys =>
                 for {
                   p <- Promise.make[Nothing, Option[Unit]]
@@ -74,13 +67,10 @@ object ShardingSpec
                   _   <- sharding.send(shardId, "get")
                   res <- p.await
                 } yield res
-            },
-            isNone
-          )
+            })(isNone)
         },
         testM("work with 2 actor systems") {
-          assertM(
-            (actorSystem zip actorSystem2).use {
+          assertM((actorSystem zip actorSystem2).use {
               case (sys1, sys2) =>
                 for {
                   p1         <- Promise.make[Nothing, Unit]
@@ -94,9 +84,7 @@ object ShardingSpec
                   _          <- p1.await
                   _          <- p2.await
                 } yield ()
-            },
-            isUnit
-          )
+            })(isUnit)
         }
       ),
       List(TestAspect.executionStrategy(ExecutionStrategy.Sequential))
