@@ -4,7 +4,7 @@ import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Prop
 import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings }
 import zio.akka.cluster.sharding
 import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PoisonPillPayload }
-import zio.{ Ref, Runtime, Task, UIO, ZIO }
+import zio.{ Has, Ref, Runtime, Task, UIO, ZIO }
 
 /**
  *  A `Sharding[M]` is able to send messages of type `M` to a sharded entity or to stop one.
@@ -31,10 +31,10 @@ object Sharding {
     name: String,
     onMessage: Msg => ZIO[Entity[State], Nothing, Unit],
     numberOfShards: Int = 100
-  ): ZIO[ActorSystem, Throwable, Sharding[Msg]] =
+  ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]] =
     for {
-      rts         <- ZIO.runtime[ActorSystem]
-      actorSystem = rts.environment
+      rts         <- ZIO.runtime[Has[ActorSystem]]
+      actorSystem = rts.environment.get
       shardingRegion <- Task(
                          ClusterSharding(actorSystem).start(
                            typeName = name,
@@ -68,10 +68,10 @@ object Sharding {
     name: String,
     role: Option[String],
     numberOfShards: Int = 100
-  ): ZIO[ActorSystem, Throwable, Sharding[Msg]] =
+  ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]] =
     for {
-      rts         <- ZIO.runtime[ActorSystem]
-      actorSystem = rts.environment
+      rts         <- ZIO.runtime[Has[ActorSystem]]
+      actorSystem = rts.environment.get
       shardingRegion <- Task(
                          ClusterSharding(actorSystem).startProxy(
                            typeName = name,
