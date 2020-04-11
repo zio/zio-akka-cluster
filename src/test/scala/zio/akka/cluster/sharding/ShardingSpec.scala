@@ -75,6 +75,16 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(equalTo(msg)).provideLayer(actorSystem)
       },
+      testM("send and receive a message using ask") {
+        val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
+          incomingMsg => ZIO.accessM[Entity[Any]](r => r.replyToSender(incomingMsg).orDie)
+        assertM(
+          for {
+            sharding <- Sharding.start(shardName, onMessage)
+            reply    <- sharding.ask[String](shardId, msg)
+          } yield reply
+        )(equalTo(msg)).provideLayer(actorSystem)
+      },
       testM("gather state") {
         assertM(
           for {
