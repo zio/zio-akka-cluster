@@ -152,16 +152,17 @@ It requires:
 
 You can also use `Sharding.startProxy` if you need to send messages to entities located on `other` nodes.
 
-To send a message to a sharded entity, use `send`. To stop one, use `stop`.
+To send a message to a sharded entity without expecting a response, use `send`. To send a message to a sharded entity expecting a response, use `ask`. To stop one, use `stop`.
 The `entityId` identifies the entity to target. Messages sent to the same `entityId` from different nodes in the cluster will be handled by the same actor.
 
 ```scala
 def send(entityId: String, data: M): Task[Unit]
+def ask[R](entityId: String, data: M): Task[R]
 def stop(entityId: String): Task[Unit]
 ```
 
 **Note on Serialization**
-Akka messages are serialized when they are sent across the network. By default, Java serialization is used but it is not recommended to use it in production.
+Akka messages are serialized when they are sent across the network. By default, Java serialization is used, but it is not recommended in production.
 See [Akka Documentation](https://doc.akka.io/docs/akka/current/serialization.html) to see how to provide your own serializer.
 This library wraps messages inside of a `zio.akka.cluster.sharding.MessageEnvelope` case class, so your serializer needs to cover it as well.
 

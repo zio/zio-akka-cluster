@@ -32,6 +32,7 @@ object Sharding {
    * @param name the name of the entity type
    * @param onMessage the behavior of the entity when it receives a message
    * @param numberOfShards a fixed number of shards
+   * @param askTimeout     a finite duration specifying how long an ask is allowed to wait for an entity to respond
    * @return a [[Sharding]] object that can be used to send messages to sharded entities
    */
   def start[Msg, State](
@@ -71,6 +72,7 @@ object Sharding {
    * @param name           the name of the entity type
    * @param role           an optional role to specify that this entity type is located on cluster nodes with a specific role
    * @param numberOfShards a fixed number of shards
+   * @param askTimeout     a finite duration specifying how long an ask is allowed to wait for an entity to respond
    * @return a [[Sharding]] object that can be used to send messages to sharded entities on other nodes
    */
   def startProxy[Msg](
