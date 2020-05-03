@@ -7,4 +7,5 @@ trait Entity[State] {
   def id: String
   def state: Ref[Option[State]]
   def stop: UIO[Unit]
+  def passivate: UIO[Unit]
 }

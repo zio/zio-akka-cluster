@@ -139,6 +139,7 @@ object Sharding {
       override def id: String                           = context.self.path.name
       override def state: Ref[Option[State]]            = ref
       override def stop: UIO[Unit]                      = UIO(actorContext.stop(self))
+      override def passivate: UIO[Unit]                 = UIO(actorContext.parent ! Passivate(PoisonPill))
       override def replyToSender[R](msg: R): Task[Unit] = Task(context.sender() ! msg)
     }
 
