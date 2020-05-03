@@ -1,15 +1,15 @@
 package zio.akka.cluster.sharding
 
-import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props }
-import akka.pattern.{ ask => askPattern }
-import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings }
-import akka.util.Timeout
-import zio.akka.cluster.sharding
-import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PoisonPillPayload }
-import zio.{ =!=, Has, Ref, Runtime, Task, UIO, ZIO }
-
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
+import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props }
+import akka.cluster.sharding.ShardRegion.Passivate
+import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings }
+import akka.pattern.{ ask => askPattern }
+import akka.util.Timeout
+import zio.akka.cluster.sharding
+import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PassivatePayload, PoisonPillPayload }
+import zio.{ =!=, Has, Ref, Runtime, Task, UIO, ZIO }
 
 /**
  *  A `Sharding[M]` is able to send messages of type `M` to a sharded entity or to stop one.
@@ -19,6 +19,8 @@ trait Sharding[M] {
   def send(entityId: String, data: M): Task[Unit]
 
   def stop(entityId: String): Task[Unit]
+
+  def passivate(entityId: String): Task[Unit]
 
   def ask[R](entityId: String, data: M)(implicit tag: ClassTag[R], proof: R =!= Nothing): Task[R]
 
@@ -53,6 +55,7 @@ object Sharding {
                              case MessageEnvelope(entityId, payload) =>
                                payload match {
                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                 case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
                                }
                            },
@@ -92,6 +95,7 @@ object Sharding {
                              case MessageEnvelope(entityId, payload) =>
                                payload match {
                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                 case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
                                }
                            },
@@ -115,6 +119,9 @@ object Sharding {
     override def stop(entityId: String): Task[Unit] =
       Task(getShardingRegion ! sharding.MessageEnvelope(entityId, PoisonPillPayload))
 
+    override def passivate(entityId: String): Task[Unit] =
+      Task(getShardingRegion ! sharding.MessageEnvelope(entityId, PassivatePayload))
+
     override def ask[R](entityId: String, data: Msg)(implicit tag: ClassTag[R], proof: R =!= Nothing): Task[R] =
       Task.fromFuture(_ =>
         (getShardingRegion ? sharding.MessageEnvelope(entityId, MessagePayload(data)))
@@ -136,6 +143,8 @@ object Sharding {
     }
 
     def receive: Receive = {
+      case p: Passivate =>
+        actorContext.parent ! p
       case MessagePayload(msg) =>
         rts.unsafeRunSync(onMessage(msg.asInstanceOf[Msg]).provide(entity))
         ()
