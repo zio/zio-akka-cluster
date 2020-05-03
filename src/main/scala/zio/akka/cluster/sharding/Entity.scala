@@ -9,5 +9,5 @@ trait Entity[State] {
   def state: Ref[Option[State]]
   def stop: UIO[Unit]
   def passivate: UIO[Unit]
-  def setTimeout(duration: Duration): UIO[Unit]
+  def passivateAfter(duration: Duration): UIO[Unit]
 }
