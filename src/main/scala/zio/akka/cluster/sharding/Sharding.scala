@@ -136,11 +136,11 @@ object Sharding {
     val ref: Ref[Option[State]]    = rts.unsafeRun(Ref.make[Option[State]](None))
     val actorContext: ActorContext = context
     val entity: Entity[State] = new Entity[State] {
-      override def id: String                           = actorContext.self.path.name
-      override def state: Ref[Option[State]]            = ref
-      override def stop: UIO[Unit]                      = UIO(actorContext.stop(self))
-      override def passivate: UIO[Unit]                 = UIO(actorContext.parent ! Passivate(PoisonPill))
-      override def replyToSender[R](msg: R): Task[Unit] = Task(actorContext.sender() ! msg)
+      override def id: String                                = actorContext.self.path.name
+      override def state: Ref[Option[State]]                 = ref
+      override def stop: UIO[Unit]                           = UIO(actorContext.stop(self))
+      override def passivate: UIO[Unit]                      = UIO(actorContext.parent ! Passivate(PoisonPill))
+      override def replyToSender[R](msg: R): Task[Unit]      = Task(actorContext.sender() ! msg)
       override def setTimeout(duration: Duration): UIO[Unit] = UIO(actorContext.setReceiveTimeout(duration))
     }
 
