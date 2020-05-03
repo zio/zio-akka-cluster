@@ -130,6 +130,28 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(isNone).provideLayer(actorSystem)
       },
+      testM("passivate") {
+        assertM(
+          for {
+            p <- Promise.make[Nothing, Option[Unit]]
+            onMessage = (msg: String) =>
+              msg match {
+                case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
+                case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
+              }
+            sharding <- Sharding.start(shardName, onMessage)
+            _        <- sharding.send(shardId, "set")
+            _        <- sharding.passivate(shardId)
+            _ <- ZIO
+                  .sleep(3 seconds)
+                  .provideLayer(
+                    Clock.live
+                  ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+            _   <- sharding.send(shardId, "get")
+            res <- p.await
+          } yield res
+        )(isNone).provideLayer(actorSystem)
+      },
       testM("work with 2 actor systems") {
         assertM(
           actorSystem.build.use(a1 =>

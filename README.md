@@ -132,7 +132,7 @@ Akka Cluster Sharding lets you distribute entities across a cluster and communic
 It is particularly useful when you have some business logic that needs to be processed by a single process across a cluster (e.g. some state that should be only in one place at a given time, a single writer to a database, etc).
 See [Akka Documentation](https://doc.akka.io/docs/akka/current/cluster-sharding.html) to know more about Cluster Sharding usage.
 
-To start sharding a given entity type on a node, use `Sharding.start`. It returns a `Sharding` object which can be used to send messages and stop sharded entities.
+To start sharding a given entity type on a node, use `Sharding.start`. It returns a `Sharding` object which can be used to send messages, stop or passivate sharded entities.
 
 ```scala
 def start[Msg, State](
@@ -159,6 +159,7 @@ The `entityId` identifies the entity to target. Messages sent to the same `entit
 def send(entityId: String, data: M): Task[Unit]
 def ask[R](entityId: String, data: M): Task[R]
 def stop(entityId: String): Task[Unit]
+def passivate(entityId: String): Task[Unit]
 ```
 
 **Note on Serialization**
