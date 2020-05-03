@@ -1,5 +1,6 @@
 package zio.akka.cluster.sharding
 
+import scala.concurrent.duration.Duration
 import zio.{ Ref, Task, UIO }
 
 trait Entity[State] {
@@ -7,4 +8,6 @@ trait Entity[State] {
   def id: String
   def state: Ref[Option[State]]
   def stop: UIO[Unit]
+  def passivate: UIO[Unit]
+  def passivateAfter(duration: Duration): UIO[Unit]
 }

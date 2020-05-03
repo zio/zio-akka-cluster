@@ -2,7 +2,7 @@ package zio.akka.cluster.sharding
 
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
-import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props }
+import akka.actor.{ Actor, ActorContext, ActorRef, ActorSystem, PoisonPill, Props, ReceiveTimeout }
 import akka.cluster.sharding.ShardRegion.Passivate
 import akka.cluster.sharding.{ ClusterSharding, ClusterShardingSettings }
 import akka.pattern.{ ask => askPattern }
@@ -136,13 +136,19 @@ object Sharding {
     val ref: Ref[Option[State]]    = rts.unsafeRun(Ref.make[Option[State]](None))
     val actorContext: ActorContext = context
     val entity: Entity[State] = new Entity[State] {
-      override def id: String                           = context.self.path.name
-      override def state: Ref[Option[State]]            = ref
-      override def stop: UIO[Unit]                      = UIO(actorContext.stop(self))
-      override def replyToSender[R](msg: R): Task[Unit] = Task(context.sender() ! msg)
+      override def id: String                                    = actorContext.self.path.name
+      override def state: Ref[Option[State]]                     = ref
+      override def stop: UIO[Unit]                               = UIO(actorContext.stop(self))
+      override def passivate: UIO[Unit]                          = UIO(actorContext.parent ! Passivate(PoisonPill))
+      override def passivateAfter(duration: Duration): UIO[Unit] = UIO(actorContext.self ! SetTimeout(duration))
+      override def replyToSender[R](msg: R): Task[Unit]          = Task(actorContext.sender() ! msg)
     }
 
     def receive: Receive = {
+      case SetTimeout(duration) =>
+        actorContext.setReceiveTimeout(duration)
+      case ReceiveTimeout =>
+        actorContext.parent ! Passivate(PoisonPill)
       case p: Passivate =>
         actorContext.parent ! p
       case MessagePayload(msg) =>
