@@ -9,7 +9,7 @@ import akka.pattern.{ ask => askPattern }
 import akka.util.Timeout
 import zio.akka.cluster.sharding
 import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PassivatePayload, PoisonPillPayload }
-import zio.{ =!=, Has, Ref, Runtime, Task, UIO, ZIO }
+import zio.{ =!=, Has, Ref, Runtime, Tagged, Task, UIO, ZIO, ZLayer }
 
 /**
  *  A `Sharding[M]` is able to send messages of type `M` to a sharded entity or to stop one.
@@ -37,19 +37,19 @@ object Sharding {
    * @param askTimeout     a finite duration specifying how long an ask is allowed to wait for an entity to respond
    * @return a [[Sharding]] object that can be used to send messages to sharded entities
    */
-  def start[Msg, State](
+  def start[R <: Has[_], Msg, State: Tagged](
     name: String,
-    onMessage: Msg => ZIO[Entity[State], Nothing, Unit],
+    onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit],
     numberOfShards: Int = 100,
     askTimeout: FiniteDuration = 10.seconds
-  ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]] =
+  ): ZIO[Has[ActorSystem] with R, Throwable, Sharding[Msg]] =
     for {
-      rts         <- ZIO.runtime[Has[ActorSystem]]
-      actorSystem = rts.environment.get
+      rts         <- ZIO.runtime[Has[ActorSystem] with R]
+      actorSystem = rts.environment.get[ActorSystem]
       shardingRegion <- Task(
                          ClusterSharding(actorSystem).start(
                            typeName = name,
-                           entityProps = Props(new ShardEntity(rts)(onMessage)),
+                           entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
                            settings = ClusterShardingSettings(actorSystem),
                            extractEntityId = {
                              case MessageEnvelope(entityId, payload) =>
@@ -129,20 +129,20 @@ object Sharding {
       )
   }
 
-  private[sharding] class ShardEntity[Msg, State](rts: Runtime[Any])(
-    onMessage: Msg => ZIO[Entity[State], Nothing, Unit]
+  private[sharding] class ShardEntity[R <: Has[_], Msg, State: Tagged](rts: Runtime[R])(
+    onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit]
   ) extends Actor {
 
     val ref: Ref[Option[State]]    = rts.unsafeRun(Ref.make[Option[State]](None))
     val actorContext: ActorContext = context
-    val entity: Entity[State] = new Entity[State] {
+    val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(new Entity.Service[State] {
       override def id: String                                    = actorContext.self.path.name
       override def state: Ref[Option[State]]                     = ref
       override def stop: UIO[Unit]                               = UIO(actorContext.stop(self))
       override def passivate: UIO[Unit]                          = UIO(actorContext.parent ! Passivate(PoisonPill))
       override def passivateAfter(duration: Duration): UIO[Unit] = UIO(actorContext.self ! SetTimeout(duration))
       override def replyToSender[R](msg: R): Task[Unit]          = Task(actorContext.sender() ! msg)
-    }
+    })
 
     def receive: Receive = {
       case SetTimeout(duration) =>
@@ -152,7 +152,7 @@ object Sharding {
       case p: Passivate =>
         actorContext.parent ! p
       case MessagePayload(msg) =>
-        rts.unsafeRunSync(onMessage(msg.asInstanceOf[Msg]).provide(entity))
+        rts.unsafeRunSync(onMessage(msg.asInstanceOf[Msg]).provideSomeLayer[R](entity))
         ()
       case _ =>
     }
