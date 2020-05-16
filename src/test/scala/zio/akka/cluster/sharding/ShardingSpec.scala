@@ -8,7 +8,7 @@ import zio.duration._
 import zio.test.Assertion._
 import zio.test._
 import zio.test.environment.TestEnvironment
-import zio.{ Has, Managed, Promise, Task, ZIO, ZLayer }
+import zio.{ ExecutionStrategy, Has, Managed, Promise, Task, ZIO, ZLayer }
 
 object ShardingSpec extends DefaultRunnableSpec {
 
