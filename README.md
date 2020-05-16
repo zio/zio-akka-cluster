@@ -15,7 +15,7 @@ The following features are available:
 To use `zio-akka-cluster`, add the following line in your `build.sbt` file:
 
 ```
-libraryDependencies += "dev.zio" %% "zio-akka-cluster" % "0.1.13"
+libraryDependencies += "dev.zio" %% "zio-akka-cluster" % "0.1.15"
 ```
 
 ## How to use
@@ -135,11 +135,11 @@ See [Akka Documentation](https://doc.akka.io/docs/akka/current/cluster-sharding.
 To start sharding a given entity type on a node, use `Sharding.start`. It returns a `Sharding` object which can be used to send messages, stop or passivate sharded entities.
 
 ```scala
-def start[Msg, State](
+def start[R, Msg, State](
     name: String,
-    onMessage: Msg => ZIO[Entity[State], Nothing, Unit],
+    onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit],
     numberOfShards: Int = 100
-  ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]]
+  ): ZIO[Has[ActorSystem] with R, Throwable, Sharding[Msg]]
 ```
 
 It requires:
@@ -178,8 +178,8 @@ val actorSystem: ZLayer[Any, Throwable, Has[ActorSystem]] =
   ZLayer.fromManaged(Managed.make(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 val behavior: String => ZIO[Entity[Int], Nothing, Unit] = {
-  case "+" => ZIO.accessM[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) + 1)))
-  case "-" => ZIO.accessM[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) - 1)))
+  case "+" => ZIO.accessM[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) + 1)))
+  case "-" => ZIO.accessM[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) - 1)))
   case _   => ZIO.unit
 }
 

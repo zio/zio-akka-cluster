@@ -8,7 +8,7 @@ import zio.duration._
 import zio.test.Assertion._
 import zio.test._
 import zio.test.environment.TestEnvironment
-import zio.{ ExecutionStrategy, Has, Managed, Promise, Task, ZIO, ZLayer }
+import zio.{ ExecutionStrategy, Has, Managed, Promise, Task, UIO, ZIO, ZLayer }
 
 object ShardingSpec extends DefaultRunnableSpec {
 
@@ -77,7 +77,7 @@ object ShardingSpec extends DefaultRunnableSpec {
       },
       testM("send and receive a message using ask") {
         val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
-          incomingMsg => ZIO.accessM[Entity[Any]](r => r.replyToSender(incomingMsg).orDie)
+          incomingMsg => ZIO.accessM[Entity[Any]](r => r.get.replyToSender(incomingMsg).orDie)
         assertM(
           for {
             sharding <- Sharding.start(shardName, onMessage)
@@ -91,7 +91,7 @@ object ShardingSpec extends DefaultRunnableSpec {
             p <- Promise.make[Nothing, Boolean]
             onMessage = (_: String) =>
               for {
-                state <- ZIO.access[Entity[Int]](_.state)
+                state <- ZIO.access[Entity[Int]](_.get.state)
                 newState <- state.updateAndGet {
                              case None    => Some(1)
                              case Some(x) => Some(x + 1)
@@ -113,9 +113,9 @@ object ShardingSpec extends DefaultRunnableSpec {
             p <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
               msg match {
-                case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
-                case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
-                case "die" => ZIO.accessM[Entity[Unit]](_.stop)
+                case "set" => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
+                case "get" => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                case "die" => ZIO.accessM[Entity[Unit]](_.get.stop)
               }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -136,12 +136,35 @@ object ShardingSpec extends DefaultRunnableSpec {
             p <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
               msg match {
-                case "set" => ZIO.accessM[Entity[Unit]](_.state.set(Some(())))
-                case "get" => ZIO.accessM[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
+                case "set" => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
+                case "get" => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
               }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
             _        <- sharding.passivate(shardId)
+            _ <- ZIO
+                  .sleep(3 seconds)
+                  .provideLayer(
+                    Clock.live
+                  ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+            _   <- sharding.send(shardId, "get")
+            res <- p.await
+          } yield res
+        )(isNone).provideLayer(actorSystem)
+      },
+      testM("passivateAfter") {
+        assertM(
+          for {
+            p <- Promise.make[Nothing, Option[Unit]]
+            onMessage = (msg: String) =>
+              msg match {
+                case "set"     => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
+                case "get"     => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                case "timeout" => ZIO.accessM[Entity[Unit]](_.get.passivateAfter((1 millisecond).asScala))
+              }
+            sharding <- Sharding.start(shardName, onMessage)
+            _        <- sharding.send(shardId, "set")
+            _        <- sharding.send(shardId, "timeout")
             _ <- ZIO
                   .sleep(3 seconds)
                   .provideLayer(
@@ -171,9 +194,30 @@ object ShardingSpec extends DefaultRunnableSpec {
             )
           )
         )(isUnit)
+      },
+      testM("provide proper environment to onMessage") {
+        trait TestService {
+          def doSomething(): UIO[String]
+        }
+        def doSomething =
+          ZIO.accessM[Has[TestService]](_.get.doSomething())
+
+        val l = ZLayer.succeed(new TestService {
+          override def doSomething(): UIO[String] = UIO("test")
+        })
+
+        assertM(
+          for {
+            p         <- Promise.make[Nothing, String]
+            onMessage = (_: String) => (doSomething >>= p.succeed).unit
+            sharding  <- Sharding.start(shardName, onMessage)
+            _         <- sharding.send(shardId, msg)
+            res       <- p.await
+          } yield res
+        )(equalTo("test")).provideLayer(actorSystem ++ l)
       }
     )
 
   override def aspects: List[TestAspect[Nothing, TestEnvironment, Nothing, Any]] =
-    List(TestAspect.executionStrategy(ExecutionStrategy.Sequential))
+    List(TestAspect.executionStrategy(ExecutionStrategy.Sequential), TestAspect.timeout(30.seconds))
 }
