@@ -1,6 +1,6 @@
 package zio.akka.cluster
 
-import zio.{ Has, Ref, Tagged, Task, UIO, ZIO }
+import zio.{ Has, Ref, Tag, Task, UIO, ZIO }
 
 import scala.concurrent.duration.Duration
 
@@ -18,17 +18,17 @@ package object sharding {
       def passivateAfter(duration: Duration): UIO[Unit]
     }
 
-    def replyToSender[State: Tagged, R](msg: R) =
+    def replyToSender[State: Tag, R](msg: R) =
       ZIO.accessM[Entity[State]](_.get.replyToSender(msg))
-    def id[State: Tagged] =
+    def id[State: Tag] =
       ZIO.access[Entity[State]](_.get.id)
-    def state[State: Tagged] =
+    def state[State: Tag] =
       ZIO.access[Entity[State]](_.get.state)
-    def stop[State: Tagged] =
+    def stop[State: Tag] =
       ZIO.accessM[Entity[State]](_.get.stop)
-    def passivate[State: Tagged] =
+    def passivate[State: Tag] =
       ZIO.accessM[Entity[State]](_.get.passivate)
-    def passivateAfter[State: Tagged](duration: Duration) =
+    def passivateAfter[State: Tag](duration: Duration) =
       ZIO.accessM[Entity[State]](_.get.passivateAfter(duration))
 
   }
