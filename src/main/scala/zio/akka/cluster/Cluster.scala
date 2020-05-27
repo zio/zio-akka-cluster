@@ -82,7 +82,7 @@ object Cluster {
           case Success(_)     => ()
           case Failure(cause) => if (cause.interrupted) self ! PoisonPill // stop listening if the queue was shut down
         }
-      case _ =>
+      case _                      =>
     }
   }
 

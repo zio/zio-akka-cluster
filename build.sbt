@@ -76,7 +76,7 @@ scalacOptions ++= Seq(
       "-opt:l:inline",
       "-Xfuture"
     )
-  case _ => Nil
+  case _             => Nil
 })
 
 fork in run := true
