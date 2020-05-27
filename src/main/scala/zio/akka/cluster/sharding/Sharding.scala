@@ -44,26 +44,26 @@ object Sharding {
     askTimeout: FiniteDuration = 10.seconds
   ): ZIO[Has[ActorSystem] with R, Throwable, Sharding[Msg]] =
     for {
-      rts         <- ZIO.runtime[Has[ActorSystem] with R]
-      actorSystem = rts.environment.get[ActorSystem]
+      rts            <- ZIO.runtime[Has[ActorSystem] with R]
+      actorSystem     = rts.environment.get[ActorSystem]
       shardingRegion <- Task(
-                         ClusterSharding(actorSystem).start(
-                           typeName = name,
-                           entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
-                           settings = ClusterShardingSettings(actorSystem),
-                           extractEntityId = {
-                             case MessageEnvelope(entityId, payload) =>
-                               payload match {
-                                 case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
-                                 case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
-                                 case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
-                               }
-                           },
-                           extractShardId = {
-                             case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
-                           }
-                         )
-                       )
+                          ClusterSharding(actorSystem).start(
+                            typeName = name,
+                            entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
+                            settings = ClusterShardingSettings(actorSystem),
+                            extractEntityId = {
+                              case MessageEnvelope(entityId, payload) =>
+                                payload match {
+                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                  case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
+                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
+                                }
+                            },
+                            extractShardId = {
+                              case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
+                            }
+                          )
+                        )
     } yield new ShardingImpl[Msg] {
       override val getShardingRegion: ActorRef = shardingRegion
       override implicit val timeout: Timeout   = Timeout(askTimeout)
@@ -85,25 +85,25 @@ object Sharding {
     askTimeout: FiniteDuration = 10.seconds
   ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]] =
     for {
-      rts         <- ZIO.runtime[Has[ActorSystem]]
-      actorSystem = rts.environment.get
+      rts            <- ZIO.runtime[Has[ActorSystem]]
+      actorSystem     = rts.environment.get
       shardingRegion <- Task(
-                         ClusterSharding(actorSystem).startProxy(
-                           typeName = name,
-                           role,
-                           extractEntityId = {
-                             case MessageEnvelope(entityId, payload) =>
-                               payload match {
-                                 case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
-                                 case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
-                                 case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
-                               }
-                           },
-                           extractShardId = {
-                             case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
-                           }
-                         )
-                       )
+                          ClusterSharding(actorSystem).startProxy(
+                            typeName = name,
+                            role,
+                            extractEntityId = {
+                              case MessageEnvelope(entityId, payload) =>
+                                payload match {
+                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                  case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
+                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
+                                }
+                            },
+                            extractShardId = {
+                              case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
+                            }
+                          )
+                        )
     } yield new ShardingImpl[Msg] {
       override val timeout: Timeout            = Timeout(askTimeout)
       override val getShardingRegion: ActorRef = shardingRegion
@@ -133,8 +133,8 @@ object Sharding {
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit]
   ) extends Actor {
 
-    val ref: Ref[Option[State]]    = rts.unsafeRun(Ref.make[Option[State]](None))
-    val actorContext: ActorContext = context
+    val ref: Ref[Option[State]]                     = rts.unsafeRun(Ref.make[Option[State]](None))
+    val actorContext: ActorContext                  = context
     val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(new Entity.Service[State] {
       override def context: ActorContext                         = actorContext
       override def id: String                                    = actorContext.self.path.name
@@ -148,14 +148,14 @@ object Sharding {
     def receive: Receive = {
       case SetTimeout(duration) =>
         actorContext.setReceiveTimeout(duration)
-      case ReceiveTimeout =>
+      case ReceiveTimeout       =>
         actorContext.parent ! Passivate(PoisonPill)
-      case p: Passivate =>
+      case p: Passivate         =>
         actorContext.parent ! p
-      case MessagePayload(msg) =>
+      case MessagePayload(msg)  =>
         rts.unsafeRunSync(onMessage(msg.asInstanceOf[Msg]).provideSomeLayer[R](entity))
         ()
-      case _ =>
+      case _                    =>
     }
   }
 }

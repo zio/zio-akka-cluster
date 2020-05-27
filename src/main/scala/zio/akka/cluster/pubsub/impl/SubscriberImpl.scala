@@ -15,10 +15,10 @@ private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
     for {
       rts        <- Task.runtime
       subscribed <- Promise.make[Nothing, Unit]
-      _ <- Task(
-            getActorSystem.actorOf(Props(new SubscriberActor[A](getMediator, topic, group, rts, queue, subscribed)))
-          )
-      _ <- subscribed.await
+      _          <- Task(
+                      getActorSystem.actorOf(Props(new SubscriberActor[A](getMediator, topic, group, rts, queue, subscribed)))
+                    )
+      _          <- subscribed.await
     } yield ()
 }
 
@@ -35,7 +35,7 @@ object SubscriberImpl {
     mediator ! Subscribe(topic, group, self)
 
     def receive: PartialFunction[Any, Unit] = {
-      case SubscribeAck(_) =>
+      case SubscribeAck(_)      =>
         rts.unsafeRunSync(subscribed.succeed(()))
         ()
       case MessageEnvelope(msg) =>
