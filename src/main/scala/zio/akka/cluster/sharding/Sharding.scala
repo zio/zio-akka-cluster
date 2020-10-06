@@ -135,7 +135,7 @@ object Sharding {
 
     val ref: Ref[Option[State]]                     = rts.unsafeRun(Ref.make[Option[State]](None))
     val actorContext: ActorContext                  = context
-    val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(new Entity.Service[State] {
+    val service: Entity.Service[State]              = new Entity.Service[State] {
       override def context: ActorContext                         = actorContext
       override def id: String                                    = actorContext.self.path.name
       override def state: Ref[Option[State]]                     = ref
@@ -143,7 +143,8 @@ object Sharding {
       override def passivate: UIO[Unit]                          = UIO(actorContext.parent ! Passivate(PoisonPill))
       override def passivateAfter(duration: Duration): UIO[Unit] = UIO(actorContext.self ! SetTimeout(duration))
       override def replyToSender[M](msg: M): Task[Unit]          = Task(actorContext.sender() ! msg)
-    })
+    }
+    val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(service)
 
     def receive: Receive = {
       case SetTimeout(duration) =>
