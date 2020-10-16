@@ -26,8 +26,8 @@ developers := List(
 libraryDependencies ++= Seq(
   "dev.zio"           %% "zio"                   % "1.0.3",
   "dev.zio"           %% "zio-streams"           % "1.0.3",
-  "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.31",
-  "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.31",
+  "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.32",
+  "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.32",
   "dev.zio"           %% "zio-test"              % "1.0.3" % "test",
   "dev.zio"           %% "zio-test-sbt"          % "1.0.3" % "test",
   compilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
