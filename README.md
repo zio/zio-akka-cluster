@@ -1,6 +1,6 @@
 # ZIO Wrapper for Akka Cluster
 
-[![CircleCI](https://circleci.com/gh/zio/zio-akka-cluster/tree/master.svg?style=svg)](https://circleci.com/gh/zio/zio-akka-cluster/tree/master)
+![CI](https://github.com/zio/zio-akka-cluster/workflows/CI/badge.svg)
 
 This library is a [ZIO](https://github.com/zio/zio) wrapper for [Akka Cluster](https://doc.akka.io/docs/akka/current/index-cluster.html).
 It exposes a purely functional API allowing you to leverage the distributed features of Akka without the need to use the actor model.
