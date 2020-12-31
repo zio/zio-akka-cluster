@@ -10,7 +10,6 @@ parallelExecution in Test := false
 fork in Test := true
 pgpPublicRing := file("/tmp/public.asc")
 pgpSecretRing := file("/tmp/secret.asc")
-releaseEarlyWith := SonatypePublisher
 scmInfo := Some(
   ScmInfo(url("https://github.com/zio/zio-akka-cluster/"), "scm:git:git@github.com:zio/zio-akka-cluster.git")
 )
