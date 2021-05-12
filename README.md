@@ -1,6 +1,10 @@
 # ZIO Wrapper for Akka Cluster
 
 ![CI](https://github.com/zio/zio-akka-cluster/workflows/CI/badge.svg)
+[![Project stage: Production Ready][project-stage-badge: Production Ready]][project-stage-page]
+
+[project-stage-badge: Production Ready]: https://img.shields.io/badge/Project%20Stage-Production%20Ready-brightgreen.svg
+[project-stage-page]: https://blog.pother.ca/project-stages/
 
 This library is a [ZIO](https://github.com/zio/zio) wrapper for [Akka Cluster](https://doc.akka.io/docs/akka/current/index-cluster.html).
 It exposes a purely functional API allowing you to leverage the distributed features of Akka without the need to use the actor model.
