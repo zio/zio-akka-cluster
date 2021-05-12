@@ -1,7 +1,7 @@
 # ZIO Wrapper for Akka Cluster
 
-![CI](https://github.com/zio/zio-akka-cluster/workflows/CI/badge.svg)
 [![Project stage: Production Ready][project-stage-badge: Production Ready]][project-stage-page]
+![CI](https://github.com/zio/zio-akka-cluster/workflows/CI/badge.svg)
 
 [project-stage-badge: Production Ready]: https://img.shields.io/badge/Project%20Stage-Production%20Ready-brightgreen.svg
 [project-stage-page]: https://github.com/zio/zio/wiki/Project-Stages
