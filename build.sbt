@@ -1,7 +1,7 @@
-val mainScala   = "2.13.7"
-val allScala    = Seq("2.11.12", "2.12.15", mainScala)
-//val zioVersion = "2.0.0-RC1"
-val zioVersion  = "1.0.13"
+val mainScala = "2.13.7"
+val allScala  = Seq("2.11.12", "2.12.15", mainScala)
+
+val zioVersion  = "2.0.0-RC1"
 val akkaVersion = "2.5.32"
 
 organization := "dev.zio"
@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
   "dev.zio"           %% "zio-test"              % zioVersion % "test",
   "dev.zio"           %% "zio-test-sbt"          % zioVersion % "test",
-  compilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
+  compilerPlugin("org.typelevel" %% "kind-projector"     % "0.13.2" cross CrossVersion.full),
   compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
 )
 

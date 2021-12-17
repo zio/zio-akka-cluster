@@ -4,10 +4,11 @@ import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
 import zio.test.Assertion._
 import zio.test._
-import zio.test.environment.TestEnvironment
-import zio.{ ExecutionStrategy, Has, Managed, Task, ZLayer }
+import zio.test.TestEnvironment
+import zio.{ ExecutionStrategy, Managed, Task, ZLayer }
+import zio.test.ZIOSpecDefault
 
-object PubSubSpec extends DefaultRunnableSpec {
+object PubSubSpec extends ZIOSpecDefault {
 
   val config: Config = ConfigFactory.parseString(s"""
                                                     |akka {
@@ -26,9 +27,9 @@ object PubSubSpec extends DefaultRunnableSpec {
                                                     |}
            """.stripMargin)
 
-  val actorSystem: ZLayer[Any, Throwable, Has[ActorSystem]] =
+  val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer.fromManaged(
-      Managed.make(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+      Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
     )
 
   val topic = "topic"
@@ -36,7 +37,7 @@ object PubSubSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[TestEnvironment, Any] =
     suite("PubSubSpec")(
-      testM("send and receive a single message") {
+      test("send and receive a single message") {
         assertM(
           for {
             pubSub <- PubSub.createPubSub[String]
@@ -46,7 +47,7 @@ object PubSubSpec extends DefaultRunnableSpec {
           } yield item
         )(equalTo(msg)).provideLayer(actorSystem)
       },
-      testM("support multiple subscribers") {
+      test("support multiple subscribers") {
         assertM(
           for {
             pubSub <- PubSub.createPubSub[String]
@@ -58,7 +59,7 @@ object PubSubSpec extends DefaultRunnableSpec {
           } yield (item1, item2)
         )(equalTo((msg, msg))).provideLayer(actorSystem)
       },
-      testM("support multiple publishers") {
+      test("support multiple publishers") {
         val msg2 = "what's up"
         assertM(
           for {
@@ -71,7 +72,7 @@ object PubSubSpec extends DefaultRunnableSpec {
           } yield (item1, item2)
         )(equalTo((msg, msg2))).provideLayer(actorSystem)
       },
-      testM("send only one message to a single group") {
+      test("send only one message to a single group") {
         val group = "group"
         assertM(
           for {
@@ -84,7 +85,7 @@ object PubSubSpec extends DefaultRunnableSpec {
           } yield (item, sizes)
         )(equalTo((msg, (0, 0)))).provideLayer(actorSystem)
       },
-      testM("send one message to each group") {
+      test("send one message to each group") {
         val group1 = "group1"
         val group2 = "group2"
         assertM(
@@ -98,8 +99,5 @@ object PubSubSpec extends DefaultRunnableSpec {
           } yield List(item1, item2)
         )(equalTo(List(msg, msg))).provideLayer(actorSystem)
       }
-    )
-
-  override def aspects: List[TestAspect[Nothing, TestEnvironment, Nothing, Any]] =
-    List(TestAspect.executionStrategy(ExecutionStrategy.Sequential))
+    ) @@ TestAspect.executionStrategy(ExecutionStrategy.Sequential)
 }

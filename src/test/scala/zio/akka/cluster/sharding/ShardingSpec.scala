@@ -3,14 +3,16 @@ package zio.akka.cluster.sharding
 import scala.language.postfixOps
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
-import zio.clock.Clock
-import zio.duration._
+import zio.Clock
+
 import zio.test.Assertion._
 import zio.test._
-import zio.test.environment.TestEnvironment
-import zio.{ ExecutionStrategy, Has, Managed, Promise, Task, UIO, ZIO, ZLayer }
+import zio.test.TestEnvironment
+import zio.{ ExecutionStrategy, Managed, Promise, Task, UIO, ZIO, ZLayer }
+import zio._
+import zio.test.ZIOSpecDefault
 
-object ShardingSpec extends DefaultRunnableSpec {
+object ShardingSpec extends ZIOSpecDefault {
 
   val config: Config = ConfigFactory.parseString(s"""
                                                     |akka {
@@ -30,9 +32,9 @@ object ShardingSpec extends DefaultRunnableSpec {
                                                     |}
       """.stripMargin)
 
-  val actorSystem: ZLayer[Any, Throwable, Has[ActorSystem]] =
+  val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer.fromManaged(
-      Managed.make(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+      Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
     )
 
   val config2: Config = ConfigFactory.parseString(s"""
@@ -53,9 +55,11 @@ object ShardingSpec extends DefaultRunnableSpec {
                                                      |}
       """.stripMargin)
 
-  val actorSystem2: ZLayer[Any, Throwable, Has[ActorSystem]] =
+  val actorSystem2: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer.fromManaged(
-      Managed.make(Task(ActorSystem("Test", config2)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+      Managed.acquireReleaseWith(Task(ActorSystem("Test", config2)))(sys =>
+        Task.fromFuture(_ => sys.terminate()).either
+      )
     )
 
   val shardId   = "shard"
@@ -64,7 +68,7 @@ object ShardingSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[TestEnvironment, Any] =
     suite("ShardingSpec")(
-      testM("send and receive a single message") {
+      test("send and receive a single message") {
         assertM(
           for {
             p        <- Promise.make[Nothing, String]
@@ -75,9 +79,9 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(equalTo(msg)).provideLayer(actorSystem)
       },
-      testM("send and receive a message using ask") {
+      test("send and receive a message using ask") {
         val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
-          incomingMsg => ZIO.accessM[Entity[Any]](r => r.get.replyToSender(incomingMsg).orDie)
+          incomingMsg => ZIO.environmentWithZIO[Entity[Any]](r => r.get.replyToSender(incomingMsg).orDie)
         assertM(
           for {
             sharding <- Sharding.start(shardName, onMessage)
@@ -85,13 +89,13 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield reply
         )(equalTo(msg)).provideLayer(actorSystem)
       },
-      testM("gather state") {
+      test("gather state") {
         assertM(
           for {
             p         <- Promise.make[Nothing, Boolean]
             onMessage  = (_: String) =>
                            for {
-                             state    <- ZIO.access[Entity[Int]](_.get.state)
+                             state    <- ZIO.environmentWith[Entity[Int]](_.get.state)
                              newState <- state.updateAndGet {
                                            case None    => Some(1)
                                            case Some(x) => Some(x + 1)
@@ -109,15 +113,16 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield (earlyPoll, res)
         )(equalTo((None, true))).provideLayer(actorSystem)
       },
-      testM("kill itself") {
+      test("kill itself") {
         assertM(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
-                            case "get" => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
-                            case "die" => ZIO.accessM[Entity[Unit]](_.get.stop)
+                            case "set" => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "get" =>
+                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                            case "die" => ZIO.environmentWithZIO[Entity[Unit]](_.get.stop)
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -131,14 +136,15 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(isNone).provideLayer(actorSystem)
       },
-      testM("passivate") {
+      test("passivate") {
         assertM(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
-                            case "get" => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                            case "set" => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "get" =>
+                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -152,15 +158,17 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(isNone).provideLayer(actorSystem)
       },
-      testM("passivateAfter") {
+      test("passivateAfter") {
         assertM(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set"     => ZIO.accessM[Entity[Unit]](_.get.state.set(Some(())))
-                            case "get"     => ZIO.accessM[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
-                            case "timeout" => ZIO.accessM[Entity[Unit]](_.get.passivateAfter((1 millisecond).asScala))
+                            case "set"     => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "get"     =>
+                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                            case "timeout" =>
+                              ZIO.environmentWithZIO[Entity[Unit]](_.get.passivateAfter((1 millisecond).asScala))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -174,7 +182,7 @@ object ShardingSpec extends DefaultRunnableSpec {
           } yield res
         )(isNone).provideLayer(actorSystem)
       },
-      testM("work with 2 actor systems") {
+      test("work with 2 actor systems") {
         assertM(
           actorSystem.build.use(a1 =>
             actorSystem2.build.use(a2 =>
@@ -183,8 +191,8 @@ object ShardingSpec extends DefaultRunnableSpec {
                 p2        <- Promise.make[Nothing, Unit]
                 onMessage1 = (_: String) => p1.succeed(()).unit
                 onMessage2 = (_: String) => p2.succeed(()).unit
-                sharding1 <- Sharding.start(shardName, onMessage1).provideLayer(ZLayer.succeedMany(a1))
-                _         <- Sharding.start(shardName, onMessage2).provideLayer(ZLayer.succeedMany(a2))
+                sharding1 <- Sharding.start(shardName, onMessage1).provideLayer(ZLayer.succeedEnvironment(a1))
+                _         <- Sharding.start(shardName, onMessage2).provideLayer(ZLayer.succeedEnvironment(a2))
                 _         <- sharding1.send("1", "hi")
                 _         <- sharding1.send("2", "hi")
                 _         <- p1.await
@@ -194,12 +202,12 @@ object ShardingSpec extends DefaultRunnableSpec {
           )
         )(isUnit)
       },
-      testM("provide proper environment to onMessage") {
+      test("provide proper environment to onMessage") {
         trait TestService {
           def doSomething(): UIO[String]
         }
         def doSomething =
-          ZIO.accessM[Has[TestService]](_.get.doSomething())
+          ZIO.environmentWithZIO[TestService](_.get.doSomething())
 
         val l = ZLayer.succeed(new TestService {
           override def doSomething(): UIO[String] = UIO("test")
@@ -208,15 +216,13 @@ object ShardingSpec extends DefaultRunnableSpec {
         assertM(
           for {
             p        <- Promise.make[Nothing, String]
-            onMessage = (_: String) => (doSomething >>= p.succeed).unit
+            onMessage = (_: String) => (doSomething flatMap p.succeed).unit
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, msg)
             res      <- p.await
           } yield res
         )(equalTo("test")).provideLayer(actorSystem ++ l)
       }
-    )
+    ) @@ TestAspect.executionStrategy(ExecutionStrategy.Sequential) @@ TestAspect.timeout(30.seconds)
 
-  override def aspects: List[TestAspect[Nothing, TestEnvironment, Nothing, Any]] =
-    List(TestAspect.executionStrategy(ExecutionStrategy.Sequential), TestAspect.timeout(30.seconds))
 }

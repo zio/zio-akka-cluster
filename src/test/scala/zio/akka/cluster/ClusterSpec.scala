@@ -5,14 +5,15 @@ import akka.cluster.ClusterEvent.MemberLeft
 import com.typesafe.config.{ Config, ConfigFactory }
 import zio.test.Assertion._
 import zio.test._
-import zio.test.environment.TestEnvironment
+import zio.test.TestEnvironment
 import zio.{ Managed, Task, ZLayer }
+import zio.test.ZIOSpecDefault
 
-object ClusterSpec extends DefaultRunnableSpec {
+object ClusterSpec extends ZIOSpecDefault {
 
   def spec: ZSpec[TestEnvironment, Any] =
     suite("ClusterSpec")(
-      testM("receive cluster events") {
+      test("receive cluster events") {
         val config: Config = ConfigFactory.parseString(s"""
                                                           |akka {
                                                           |  actor {
@@ -31,7 +32,9 @@ object ClusterSpec extends DefaultRunnableSpec {
                   """.stripMargin)
 
         val actorSystem: Managed[Throwable, ActorSystem] =
-          Managed.make(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+          Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys =>
+            Task.fromFuture(_ => sys.terminate()).either
+          )
 
         assertM(
           for {

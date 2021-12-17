@@ -1,12 +1,12 @@
 package zio.akka.cluster
 
 import akka.actor.ActorContext
-import zio.{ Has, Ref, Tag, Task, UIO, URIO, ZIO }
+import zio.{ Ref, Tag, Task, UIO, URIO, ZIO }
 
 import scala.concurrent.duration.Duration
 
 package object sharding {
-  type Entity[State] = Has[Entity.Service[State]]
+  type Entity[State] = Entity.Service[State]
 
   object Entity {
 
@@ -21,19 +21,19 @@ package object sharding {
     }
 
     def replyToSender[State: Tag, R](msg: R): ZIO[Entity[State], Throwable, Unit]         =
-      ZIO.accessM[Entity[State]](_.get.replyToSender(msg))
+      ZIO.environmentWithZIO[Entity[State]](_.get.replyToSender(msg))
     def context[State: Tag]: URIO[Entity[State], ActorContext]                            =
-      ZIO.access[Entity[State]](_.get.context)
+      ZIO.environmentWith[Entity[State]](_.get.context)
     def id[State: Tag]: URIO[Entity[State], String]                                       =
-      ZIO.access[Entity[State]](_.get.id)
+      ZIO.environmentWith[Entity[State]](_.get.id)
     def state[State: Tag]: URIO[Entity[State], Ref[Option[State]]]                        =
-      ZIO.access[Entity[State]](_.get.state)
+      ZIO.environmentWith[Entity[State]](_.get.state)
     def stop[State: Tag]: ZIO[Entity[State], Nothing, Unit]                               =
-      ZIO.accessM[Entity[State]](_.get.stop)
+      ZIO.environmentWithZIO[Entity[State]](_.get.stop)
     def passivate[State: Tag]: ZIO[Entity[State], Nothing, Unit]                          =
-      ZIO.accessM[Entity[State]](_.get.passivate)
+      ZIO.environmentWithZIO[Entity[State]](_.get.passivate)
     def passivateAfter[State: Tag](duration: Duration): ZIO[Entity[State], Nothing, Unit] =
-      ZIO.accessM[Entity[State]](_.get.passivateAfter(duration))
+      ZIO.environmentWithZIO[Entity[State]](_.get.passivateAfter(duration))
 
   }
 }

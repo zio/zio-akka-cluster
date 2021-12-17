@@ -3,7 +3,7 @@ package zio.akka.cluster.pubsub
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.cluster.pubsub.DistributedPubSub
 import zio.akka.cluster.pubsub.impl.{ PublisherImpl, SubscriberImpl }
-import zio.{ Has, Queue, Task, ZIO }
+import zio.{ Queue, Task, ZIO }
 
 /**
  *  A `Publisher[A]` is able to send messages of type `A` through Akka PubSub.
@@ -35,9 +35,9 @@ object PubSub {
   /**
    *  Creates a new `Publisher[A]`.
    */
-  def createPublisher[A]: ZIO[Has[ActorSystem], Throwable, Publisher[A]] =
+  def createPublisher[A]: ZIO[ActorSystem, Throwable, Publisher[A]] =
     for {
-      actorSystem <- ZIO.access[Has[ActorSystem]](_.get)
+      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
       mediator    <- getMediator(actorSystem)
     } yield new Publisher[A] with PublisherImpl[A] {
       override val getMediator: ActorRef = mediator
@@ -46,9 +46,9 @@ object PubSub {
   /**
    *  Creates a new `Subscriber[A]`.
    */
-  def createSubscriber[A]: ZIO[Has[ActorSystem], Throwable, Subscriber[A]] =
+  def createSubscriber[A]: ZIO[ActorSystem, Throwable, Subscriber[A]] =
     for {
-      actorSystem <- ZIO.access[Has[ActorSystem]](_.get)
+      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
       mediator    <- getMediator(actorSystem)
     } yield new Subscriber[A] with SubscriberImpl[A] {
       override val getActorSystem: ActorSystem = actorSystem
@@ -58,9 +58,9 @@ object PubSub {
   /**
    *  Creates a new `PubSub[A]`.
    */
-  def createPubSub[A]: ZIO[Has[ActorSystem], Throwable, PubSub[A]] =
+  def createPubSub[A]: ZIO[ActorSystem, Throwable, PubSub[A]] =
     for {
-      actorSystem <- ZIO.access[Has[ActorSystem]](_.get)
+      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
       mediator    <- getMediator(actorSystem)
     } yield new PubSub[A] with PublisherImpl[A] with SubscriberImpl[A] {
       override val getActorSystem: ActorSystem = actorSystem
