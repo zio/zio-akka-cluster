@@ -9,7 +9,7 @@ import akka.pattern.{ ask => askPattern }
 import akka.util.Timeout
 import zio.akka.cluster.sharding
 import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PassivatePayload, PoisonPillPayload }
-import zio.{ =!=, Has, Ref, Runtime, Tag, Task, UIO, ZIO, ZLayer }
+import zio.{ =!=, Ref, Runtime, Tag, Task, UIO, ZIO, ZLayer }
 
 /**
  *  A `Sharding[M]` is able to send messages of type `M` to a sharded entity or to stop one.
@@ -37,14 +37,14 @@ object Sharding {
    * @param askTimeout     a finite duration specifying how long an ask is allowed to wait for an entity to respond
    * @return a [[Sharding]] object that can be used to send messages to sharded entities
    */
-  def start[R <: Has[_], Msg, State: Tag](
+  def start[R, Msg, State: Tag](
     name: String,
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit],
     numberOfShards: Int = 100,
     askTimeout: FiniteDuration = 10.seconds
-  ): ZIO[Has[ActorSystem] with R, Throwable, Sharding[Msg]] =
+  ): ZIO[ActorSystem with R, Throwable, Sharding[Msg]] =
     for {
-      rts            <- ZIO.runtime[Has[ActorSystem] with R]
+      rts            <- ZIO.runtime[ActorSystem with R]
       actorSystem     = rts.environment.get[ActorSystem]
       shardingRegion <- Task(
                           ClusterSharding(actorSystem).start(
@@ -83,9 +83,9 @@ object Sharding {
     role: Option[String],
     numberOfShards: Int = 100,
     askTimeout: FiniteDuration = 10.seconds
-  ): ZIO[Has[ActorSystem], Throwable, Sharding[Msg]] =
+  ): ZIO[ActorSystem, Throwable, Sharding[Msg]] =
     for {
-      rts            <- ZIO.runtime[Has[ActorSystem]]
+      rts            <- ZIO.runtime[ActorSystem]
       actorSystem     = rts.environment.get
       shardingRegion <- Task(
                           ClusterSharding(actorSystem).startProxy(
@@ -129,7 +129,7 @@ object Sharding {
       )
   }
 
-  private[sharding] class ShardEntity[R <: Has[_], Msg, State: Tag](rts: Runtime[R])(
+  private[sharding] class ShardEntity[R, Msg, State: Tag](rts: Runtime[R])(
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit]
   ) extends Actor {
 

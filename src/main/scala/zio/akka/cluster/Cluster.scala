@@ -3,20 +3,20 @@ package zio.akka.cluster
 import akka.actor.{ Actor, ActorSystem, Address, PoisonPill, Props }
 import akka.cluster.ClusterEvent._
 import zio.Exit.{ Failure, Success }
-import zio.{ Has, Queue, Runtime, Task, ZIO }
+import zio.{ Queue, Runtime, Task, ZIO }
 
 object Cluster {
 
-  private val cluster: ZIO[Has[ActorSystem], Throwable, akka.cluster.Cluster] =
+  private val cluster: ZIO[ActorSystem, Throwable, akka.cluster.Cluster] =
     for {
-      actorSystem <- ZIO.access[Has[ActorSystem]](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       cluster     <- Task(akka.cluster.Cluster(actorSystem))
     } yield cluster
 
   /**
    *  Returns the current state of the cluster.
    */
-  val clusterState: ZIO[Has[ActorSystem], Throwable, CurrentClusterState] =
+  val clusterState: ZIO[ActorSystem, Throwable, CurrentClusterState] =
     for {
       cluster <- cluster
       state   <- Task(cluster.state)
@@ -25,7 +25,7 @@ object Cluster {
   /**
    *  Joins a cluster using the provided seed nodes.
    */
-  def join(seedNodes: List[Address]): ZIO[Has[ActorSystem], Throwable, Unit] =
+  def join(seedNodes: List[Address]): ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
       _       <- Task(cluster.joinSeedNodes(seedNodes))
@@ -34,7 +34,7 @@ object Cluster {
   /**
    *  Leaves the current cluster.
    */
-  val leave: ZIO[Has[ActorSystem], Throwable, Unit] =
+  val leave: ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
       _       <- Task(cluster.leave(cluster.selfAddress))
@@ -48,7 +48,7 @@ object Cluster {
    */
   def clusterEvents(
     initialStateAsEvents: Boolean = false
-  ): ZIO[Has[ActorSystem], Throwable, Queue[ClusterDomainEvent]] =
+  ): ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]] =
     Queue.unbounded[ClusterDomainEvent].tap(clusterEventsWith(_, initialStateAsEvents))
 
   /**
@@ -59,10 +59,10 @@ object Cluster {
   def clusterEventsWith(
     queue: Queue[ClusterDomainEvent],
     initialStateAsEvents: Boolean = false
-  ): ZIO[Has[ActorSystem], Throwable, Unit] =
+  ): ZIO[ActorSystem, Throwable, Unit] =
     for {
       rts         <- Task.runtime
-      actorSystem <- ZIO.access[Has[ActorSystem]](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 
@@ -78,9 +78,9 @@ object Cluster {
 
     def receive: PartialFunction[Any, Unit] = {
       case ev: ClusterDomainEvent =>
-        rts.unsafeRunAsync(queue.offer(ev)) {
+        rts.unsafeRunAsyncWith(queue.offer(ev)) {
           case Success(_)     => ()
-          case Failure(cause) => if (cause.interrupted) self ! PoisonPill // stop listening if the queue was shut down
+          case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
         }
       case _                      =>
     }

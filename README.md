@@ -38,13 +38,13 @@ See [Akka Documentation](https://doc.akka.io/docs/akka/current/cluster-usage.htm
 You can also manually join a cluster using `Cluster.join`.
 
 ```scala
-def join(seedNodes: List[Address]): ZIO[Has[ActorSystem], Throwable, Unit]
+def join(seedNodes: List[Address]): ZIO[ActorSystem, Throwable, Unit]
 ```
 
 It's possible to get the status of the cluster by calling `Cluster.clusterState`
 
 ```scala
-val clusterState: ZIO[Has[ActorSystem], Throwable, CurrentClusterState]
+val clusterState: ZIO[ActorSystem, Throwable, CurrentClusterState]
 ```
 
 To monitor the cluster and be informed of changes (e.g. new members, member unreachable, etc), use `Cluster.clusterEvents`.
@@ -54,13 +54,13 @@ To unsubscribe, simply `shutdown` the queue.
 `initialStateAsEvents` indicates if you want to receive previous cluster events leading to the current state, or only future events.
 
 ```scala
-def clusterEvents(initialStateAsEvents: Boolean = false): ZIO[Has[ActorSystem], Throwable, Queue[ClusterDomainEvent]]
+def clusterEvents(initialStateAsEvents: Boolean = false): ZIO[ActorSystem, Throwable, Queue[ClusterDomainEvent]]
 ```
 
 Finally, you can leave the current cluster using `Cluster.leave`.
 
 ```scala
-val leave: ZIO[Has[ActorSystem], Throwable, Unit]
+val leave: ZIO[ActorSystem, Throwable, Unit]
 ```
 
 ### Akka PubSub
@@ -75,7 +75,7 @@ See [Akka Documentation](https://doc.akka.io/docs/akka/current/distributed-pub-s
 To create a `PubSub` object which can both publish and subscribe, use `PubSub.createPubSub`.
 
 ```scala
-def createPubSub[A]: ZIO[Has[ActorSystem], Throwable, PubSub[A]]
+def createPubSub[A]: ZIO[ActorSystem, Throwable, PubSub[A]]
 ```
 
 There are also less powerful variants `PubSub.createPublisher` if you only need to publish and `PubSub.createSubscriber` if you only need to subscribe.
@@ -111,11 +111,11 @@ This library wraps messages inside of a `zio.akka.cluster.pubsub.MessageEnvelope
 
 ```scala
 import akka.actor.ActorSystem
-import zio.{ Has, Managed, Task, ZLayer }
+import zio.{ Managed, Task, ZLayer }
 import zio.akka.cluster.pubsub.PubSub
 
-val actorSystem: ZLayer[Any, Throwable, Has[ActorSystem]] =
-  ZLayer.fromManaged(Managed.make(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
+val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
+  ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 (for {
   pubSub   <- PubSub.createPubSub[String]
@@ -143,7 +143,7 @@ def start[R, Msg, State](
     name: String,
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit],
     numberOfShards: Int = 100
-  ): ZIO[Has[ActorSystem] with R, Throwable, Sharding[Msg]]
+  ): ZIO[ActorSystem with R, Throwable, Sharding[Msg]]
 ```
 
 It requires:
@@ -176,14 +176,14 @@ This library wraps messages inside of a `zio.akka.cluster.sharding.MessageEnvelo
 ```scala
 import akka.actor.ActorSystem
 import zio.akka.cluster.sharding.{ Entity, Sharding }
-import zio.{ Has, Managed, Task, ZIO, ZLayer }
+import zio.{ Managed, Task, ZIO, ZLayer }
 
-val actorSystem: ZLayer[Any, Throwable, Has[ActorSystem]] =
-  ZLayer.fromManaged(Managed.make(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
+val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
+  ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 val behavior: String => ZIO[Entity[Int], Nothing, Unit] = {
-  case "+" => ZIO.accessM[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) + 1)))
-  case "-" => ZIO.accessM[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) - 1)))
+  case "+" => ZIO.serviceWithZIO[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) + 1)))
+  case "-" => ZIO.serviceWithZIO[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) - 1)))
   case _   => ZIO.unit
 }
 

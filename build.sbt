@@ -1,13 +1,16 @@
-val mainScala = "2.13.1"
-val allScala  = Seq("2.11.12", "2.12.10", mainScala)
+val mainScala = "2.13.7"
+val allScala  = Seq("2.11.12", "2.12.15", mainScala)
+
+val zioVersion  = "2.0.0-RC1"
+val akkaVersion = "2.5.32"
 
 organization := "dev.zio"
 homepage := Some(url("https://github.com/zio/zio-akka-cluster"))
 name := "zio-akka-cluster"
 licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 scalaVersion := mainScala
-parallelExecution in Test := false
-fork in Test := true
+Test / parallelExecution := false
+Test / fork := true
 pgpPublicRing := file("/tmp/public.asc")
 pgpSecretRing := file("/tmp/secret.asc")
 scmInfo := Some(
@@ -23,13 +26,13 @@ developers := List(
 )
 
 libraryDependencies ++= Seq(
-  "dev.zio"           %% "zio"                   % "1.0.13",
-  "dev.zio"           %% "zio-streams"           % "1.0.13",
-  "com.typesafe.akka" %% "akka-cluster-tools"    % "2.5.32",
-  "com.typesafe.akka" %% "akka-cluster-sharding" % "2.5.32",
-  "dev.zio"           %% "zio-test"              % "1.0.13" % "test",
-  "dev.zio"           %% "zio-test-sbt"          % "1.0.13" % "test",
-  compilerPlugin("org.typelevel" %% "kind-projector"     % "0.10.3"),
+  "dev.zio"           %% "zio"                   % zioVersion,
+  "dev.zio"           %% "zio-streams"           % zioVersion,
+  "com.typesafe.akka" %% "akka-cluster-tools"    % akkaVersion,
+  "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
+  "dev.zio"           %% "zio-test"              % zioVersion % "test",
+  "dev.zio"           %% "zio-test-sbt"          % zioVersion % "test",
+  compilerPlugin("org.typelevel" %% "kind-projector"     % "0.13.2" cross CrossVersion.full),
   compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
 )
 
@@ -78,7 +81,7 @@ scalacOptions ++= Seq(
   case _             => Nil
 })
 
-fork in run := true
+run / fork := true
 
 crossScalaVersions := allScala
 

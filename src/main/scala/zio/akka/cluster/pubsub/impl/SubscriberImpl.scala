@@ -39,9 +39,9 @@ object SubscriberImpl {
         rts.unsafeRunSync(subscribed.succeed(()))
         ()
       case MessageEnvelope(msg) =>
-        rts.unsafeRunAsync(queue.offer(msg.asInstanceOf[A])) {
+        rts.unsafeRunAsyncWith(queue.offer(msg.asInstanceOf[A])) {
           case Success(_)     => ()
-          case Failure(cause) => if (cause.interrupted) self ! PoisonPill // stop listening if the queue was shut down
+          case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
         }
     }
   }
