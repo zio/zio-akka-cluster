@@ -3,14 +3,12 @@ package zio.akka.cluster.sharding
 import scala.language.postfixOps
 import akka.actor.ActorSystem
 import com.typesafe.config.{ Config, ConfigFactory }
-import zio.Clock
-
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
+import zio.test.ZIOSpecDefault
 import zio.{ ExecutionStrategy, Managed, Promise, Task, UIO, ZIO, ZLayer }
 import zio._
-import zio.test.ZIOSpecDefault
 
 object ShardingSpec extends ZIOSpecDefault {
 
@@ -81,7 +79,7 @@ object ShardingSpec extends ZIOSpecDefault {
       },
       test("send and receive a message using ask") {
         val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
-          incomingMsg => ZIO.service[Entity[Any]].flatMap(_.replyToSender(incomingMsg).orDie)
+          incomingMsg => ZIO.serviceWithZIO[Entity[Any]](_.replyToSender(incomingMsg).orDie)
         assertM(
           for {
             sharding <- Sharding.start(shardName, onMessage)
@@ -119,10 +117,10 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
+                            case "set" => ZIO.serviceWithZIO[Entity[Unit]](_.state.set(Some(())))
                             case "get" =>
-                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
-                            case "die" => ZIO.service[Entity[Unit]].flatMap(_.stop)
+                              ZIO.serviceWithZIO[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
+                            case "die" => ZIO.serviceWithZIO[Entity[Unit]](_.stop)
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -142,9 +140,9 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
+                            case "set" => ZIO.serviceWithZIO[Entity[Unit]](_.state.set(Some(())))
                             case "get" =>
-                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
+                              ZIO.serviceWithZIO[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -164,11 +162,11 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set"     => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
+                            case "set"     => ZIO.serviceWithZIO[Entity[Unit]](_.state.set(Some(())))
                             case "get"     =>
-                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
+                              ZIO.serviceWithZIO[Entity[Unit]](_.state.get.flatMap(s => p.succeed(s).unit))
                             case "timeout" =>
-                              ZIO.service[Entity[Unit]].flatMap(_.passivateAfter((1 millisecond).asScala))
+                              ZIO.serviceWithZIO[Entity[Unit]](_.passivateAfter((1 millisecond).asScala))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -207,7 +205,7 @@ object ShardingSpec extends ZIOSpecDefault {
           def doSomething(): UIO[String]
         }
         def doSomething =
-          ZIO.service[TestService].flatMap(_.doSomething())
+          ZIO.serviceWithZIO[TestService](_.doSomething())
 
         val l = ZLayer.succeed(new TestService {
           override def doSomething(): UIO[String] = UIO("test")

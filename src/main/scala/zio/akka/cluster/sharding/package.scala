@@ -21,7 +21,7 @@ package object sharding {
     }
 
     def replyToSender[State: Tag, R](msg: R): ZIO[Entity[State], Throwable, Unit]         =
-      ZIO.service[Entity[State]].flatMap(_.replyToSender(msg))
+      ZIO.serviceWithZIO[Entity[State]](_.replyToSender(msg))
     def context[State: Tag]: URIO[Entity[State], ActorContext]                            =
       ZIO.service[Entity[State]].map(_.context)
     def id[State: Tag]: URIO[Entity[State], String]                                       =
@@ -29,11 +29,11 @@ package object sharding {
     def state[State: Tag]: URIO[Entity[State], Ref[Option[State]]]                        =
       ZIO.service[Entity[State]].map(_.state)
     def stop[State: Tag]: ZIO[Entity[State], Nothing, Unit]                               =
-      ZIO.service[Entity[State]].flatMap(_.stop)
+      ZIO.serviceWithZIO[Entity[State]](_.stop)
     def passivate[State: Tag]: ZIO[Entity[State], Nothing, Unit]                          =
-      ZIO.service[Entity[State]].flatMap(_.passivate)
+      ZIO.serviceWithZIO[Entity[State]](_.passivate)
     def passivateAfter[State: Tag](duration: Duration): ZIO[Entity[State], Nothing, Unit] =
-      ZIO.service[Entity[State]].flatMap(_.passivateAfter(duration))
+      ZIO.serviceWithZIO[Entity[State]](_.passivateAfter(duration))
 
   }
 }

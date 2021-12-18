@@ -5,8 +5,8 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
-import zio.{ ExecutionStrategy, Managed, Task, ZLayer }
 import zio.test.ZIOSpecDefault
+import zio.{ ExecutionStrategy, Managed, Task, ZLayer }
 
 object PubSubSpec extends ZIOSpecDefault {
 

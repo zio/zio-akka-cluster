@@ -182,8 +182,8 @@ val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
   ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 val behavior: String => ZIO[Entity[Int], Nothing, Unit] = {
-  case "+" => ZIO.service[Entity[Int]].flatMap(_.state.update(x => Some(x.getOrElse(0) + 1)))
-  case "-" => ZIO.service[Entity[Int]].flatMap(_.state.update(x => Some(x.getOrElse(0) - 1)))
+  case "+" => ZIO.serviceWithZIO[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) + 1)))
+  case "-" => ZIO.serviceWithZIO[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) - 1)))
   case _   => ZIO.unit
 }
 

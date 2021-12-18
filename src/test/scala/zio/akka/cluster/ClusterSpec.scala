@@ -6,8 +6,8 @@ import com.typesafe.config.{ Config, ConfigFactory }
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
-import zio.{ Managed, Task, ZLayer }
 import zio.test.ZIOSpecDefault
+import zio.{ Managed, Task, ZLayer }
 
 object ClusterSpec extends ZIOSpecDefault {
 
