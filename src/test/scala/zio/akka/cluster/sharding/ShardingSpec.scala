@@ -93,7 +93,7 @@ object ShardingSpec extends ZIOSpecDefault {
             p         <- Promise.make[Nothing, Boolean]
             onMessage  = (_: String) =>
                            for {
-                             state    <- ZIO.service[Entity[Int]].map(_.state)
+                             state    <- ZIO.serviceWith[Entity[Int]](_.state)
                              newState <- state.updateAndGet {
                                            case None    => Some(1)
                                            case Some(x) => Some(x + 1)
