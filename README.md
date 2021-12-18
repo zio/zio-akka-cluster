@@ -111,11 +111,11 @@ This library wraps messages inside of a `zio.akka.cluster.pubsub.MessageEnvelope
 
 ```scala
 import akka.actor.ActorSystem
-import zio.{ Has, Managed, Task, ZLayer }
+import zio.{ Managed, Task, ZLayer }
 import zio.akka.cluster.pubsub.PubSub
 
 val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
-  ZLayer.fromManaged(Managed.make(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
+  ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 (for {
   pubSub   <- PubSub.createPubSub[String]
@@ -182,8 +182,8 @@ val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
   ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
 
 val behavior: String => ZIO[Entity[Int], Nothing, Unit] = {
-  case "+" => ZIO.environmentWithZIO[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) + 1)))
-  case "-" => ZIO.environmentWithZIO[Entity[Int]](_.get.state.update(x => Some(x.getOrElse(0) - 1)))
+  case "+" => ZIO.service[Entity[Int]].flatMap(_.state.update(x => Some(x.getOrElse(0) + 1)))
+  case "-" => ZIO.service[Entity[Int]].flatMap(_.state.update(x => Some(x.getOrElse(0) - 1)))
   case _   => ZIO.unit
 }
 

@@ -37,7 +37,7 @@ object Sharding {
    * @param askTimeout     a finite duration specifying how long an ask is allowed to wait for an entity to respond
    * @return a [[Sharding]] object that can be used to send messages to sharded entities
    */
-  def start[R <: Any, Msg, State: Tag](
+  def start[R, Msg, State: Tag](
     name: String,
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit],
     numberOfShards: Int = 100,
@@ -129,7 +129,7 @@ object Sharding {
       )
   }
 
-  private[sharding] class ShardEntity[R <: Any, Msg, State: Tag](rts: Runtime[R])(
+  private[sharding] class ShardEntity[R, Msg, State: Tag](rts: Runtime[R])(
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit]
   ) extends Actor {
 

@@ -21,19 +21,19 @@ package object sharding {
     }
 
     def replyToSender[State: Tag, R](msg: R): ZIO[Entity[State], Throwable, Unit]         =
-      ZIO.environmentWithZIO[Entity[State]](_.get.replyToSender(msg))
+      ZIO.service[Entity[State]].flatMap(_.replyToSender(msg))
     def context[State: Tag]: URIO[Entity[State], ActorContext]                            =
-      ZIO.environmentWith[Entity[State]](_.get.context)
+      ZIO.service[Entity[State]].map(_.context)
     def id[State: Tag]: URIO[Entity[State], String]                                       =
-      ZIO.environmentWith[Entity[State]](_.get.id)
+      ZIO.service[Entity[State]].map(_.id)
     def state[State: Tag]: URIO[Entity[State], Ref[Option[State]]]                        =
-      ZIO.environmentWith[Entity[State]](_.get.state)
+      ZIO.service[Entity[State]].map(_.state)
     def stop[State: Tag]: ZIO[Entity[State], Nothing, Unit]                               =
-      ZIO.environmentWithZIO[Entity[State]](_.get.stop)
+      ZIO.service[Entity[State]].flatMap(_.stop)
     def passivate[State: Tag]: ZIO[Entity[State], Nothing, Unit]                          =
-      ZIO.environmentWithZIO[Entity[State]](_.get.passivate)
+      ZIO.service[Entity[State]].flatMap(_.passivate)
     def passivateAfter[State: Tag](duration: Duration): ZIO[Entity[State], Nothing, Unit] =
-      ZIO.environmentWithZIO[Entity[State]](_.get.passivateAfter(duration))
+      ZIO.service[Entity[State]].flatMap(_.passivateAfter(duration))
 
   }
 }

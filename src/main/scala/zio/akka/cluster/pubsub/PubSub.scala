@@ -37,7 +37,7 @@ object PubSub {
    */
   def createPublisher[A]: ZIO[ActorSystem, Throwable, Publisher[A]] =
     for {
-      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       mediator    <- getMediator(actorSystem)
     } yield new Publisher[A] with PublisherImpl[A] {
       override val getMediator: ActorRef = mediator
@@ -48,7 +48,7 @@ object PubSub {
    */
   def createSubscriber[A]: ZIO[ActorSystem, Throwable, Subscriber[A]] =
     for {
-      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       mediator    <- getMediator(actorSystem)
     } yield new Subscriber[A] with SubscriberImpl[A] {
       override val getActorSystem: ActorSystem = actorSystem
@@ -60,7 +60,7 @@ object PubSub {
    */
   def createPubSub[A]: ZIO[ActorSystem, Throwable, PubSub[A]] =
     for {
-      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       mediator    <- getMediator(actorSystem)
     } yield new PubSub[A] with PublisherImpl[A] with SubscriberImpl[A] {
       override val getActorSystem: ActorSystem = actorSystem

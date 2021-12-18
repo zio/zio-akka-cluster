@@ -9,7 +9,7 @@ object Cluster {
 
   private val cluster: ZIO[ActorSystem, Throwable, akka.cluster.Cluster] =
     for {
-      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       cluster     <- Task(akka.cluster.Cluster(actorSystem))
     } yield cluster
 
@@ -62,7 +62,7 @@ object Cluster {
   ): ZIO[ActorSystem, Throwable, Unit] =
     for {
       rts         <- Task.runtime
-      actorSystem <- ZIO.environmentWith[ActorSystem](_.get)
+      actorSystem <- ZIO.service[ActorSystem]
       _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 

@@ -81,7 +81,7 @@ object ShardingSpec extends ZIOSpecDefault {
       },
       test("send and receive a message using ask") {
         val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
-          incomingMsg => ZIO.environmentWithZIO[Entity[Any]](r => r.get.replyToSender(incomingMsg).orDie)
+          incomingMsg => ZIO.service[Entity[Any]].flatMap(_.replyToSender(incomingMsg).orDie)
         assertM(
           for {
             sharding <- Sharding.start(shardName, onMessage)
@@ -95,7 +95,7 @@ object ShardingSpec extends ZIOSpecDefault {
             p         <- Promise.make[Nothing, Boolean]
             onMessage  = (_: String) =>
                            for {
-                             state    <- ZIO.environmentWith[Entity[Int]](_.get.state)
+                             state    <- ZIO.service[Entity[Int]].map(_.state)
                              newState <- state.updateAndGet {
                                            case None    => Some(1)
                                            case Some(x) => Some(x + 1)
@@ -119,10 +119,10 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "set" => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
                             case "get" =>
-                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
-                            case "die" => ZIO.environmentWithZIO[Entity[Unit]](_.get.stop)
+                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
+                            case "die" => ZIO.service[Entity[Unit]].flatMap(_.stop)
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -142,9 +142,9 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set" => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "set" => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
                             case "get" =>
-                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -164,11 +164,11 @@ object ShardingSpec extends ZIOSpecDefault {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
                           msg match {
-                            case "set"     => ZIO.environmentWithZIO[Entity[Unit]](_.get.state.set(Some(())))
+                            case "set"     => ZIO.service[Entity[Unit]].flatMap(_.state.set(Some(())))
                             case "get"     =>
-                              ZIO.environmentWithZIO[Entity[Unit]](_.get.state.get.flatMap(s => p.succeed(s).unit))
+                              ZIO.service[Entity[Unit]].flatMap(_.state.get.flatMap(s => p.succeed(s).unit))
                             case "timeout" =>
-                              ZIO.environmentWithZIO[Entity[Unit]](_.get.passivateAfter((1 millisecond).asScala))
+                              ZIO.service[Entity[Unit]].flatMap(_.passivateAfter((1 millisecond).asScala))
                           }
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
@@ -191,8 +191,8 @@ object ShardingSpec extends ZIOSpecDefault {
                 p2        <- Promise.make[Nothing, Unit]
                 onMessage1 = (_: String) => p1.succeed(()).unit
                 onMessage2 = (_: String) => p2.succeed(()).unit
-                sharding1 <- Sharding.start(shardName, onMessage1).provideLayer(ZLayer.succeedEnvironment(a1))
-                _         <- Sharding.start(shardName, onMessage2).provideLayer(ZLayer.succeedEnvironment(a2))
+                sharding1 <- Sharding.start(shardName, onMessage1).provideEnvironment(a1)
+                _         <- Sharding.start(shardName, onMessage2).provideEnvironment(a2)
                 _         <- sharding1.send("1", "hi")
                 _         <- sharding1.send("2", "hi")
                 _         <- p1.await
@@ -207,7 +207,7 @@ object ShardingSpec extends ZIOSpecDefault {
           def doSomething(): UIO[String]
         }
         def doSomething =
-          ZIO.environmentWithZIO[TestService](_.get.doSomething())
+          ZIO.service[TestService].flatMap(_.doSomething())
 
         val l = ZLayer.succeed(new TestService {
           override def doSomething(): UIO[String] = UIO("test")
