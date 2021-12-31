@@ -76,13 +76,14 @@ object Cluster {
       if (initialStateAsEvents) InitialStateAsEvents else InitialStateAsSnapshot
     akka.cluster.Cluster(context.system).subscribe(self, initialState, classOf[ClusterDomainEvent])
 
-    def receive: PartialFunction[Any, Unit] = {
+    def receive: Actor.Receive = {
       case ev: ClusterDomainEvent =>
         rts.unsafeRunAsyncWith(queue.offer(ev)) {
           case Success(_)     => ()
           case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
         }
-      case _                      =>
+        ()
+      case _                      => ()
     }
   }
 

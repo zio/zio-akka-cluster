@@ -34,7 +34,7 @@ object SubscriberImpl {
 
     mediator ! Subscribe(topic, group, self)
 
-    def receive: PartialFunction[Any, Unit] = {
+    def receive: Actor.Receive = {
       case SubscribeAck(_)      =>
         rts.unsafeRunSync(subscribed.succeed(()))
         ()
@@ -43,6 +43,7 @@ object SubscriberImpl {
           case Success(_)     => ()
           case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
         }
+        ()
     }
   }
 }
