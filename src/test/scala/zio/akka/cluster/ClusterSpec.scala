@@ -1,7 +1,7 @@
 package zio.akka.cluster
 
 import akka.actor.ActorSystem
-import akka.cluster.ClusterEvent.MemberLeft
+import akka.cluster.ClusterEvent.{ MemberLeft, MemberUp }
 import com.typesafe.config.{ Config, ConfigFactory }
 import zio.test.Assertion._
 import zio.test._
@@ -44,7 +44,8 @@ object ClusterSpec extends ZIOSpecDefault {
             _     <- Cluster.leave
             item  <- queue.take
           } yield item
-        )(isSubtype[MemberLeft](anything)).provideLayer(ZLayer.fromManaged(actorSystem))
+        )(isSubtype[MemberUp](anything) || isSubtype[MemberLeft](anything))
+          .provideLayer(ZLayer.fromManaged(actorSystem))
       }
     )
 }
