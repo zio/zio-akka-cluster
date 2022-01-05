@@ -45,8 +45,9 @@ object ClusterSpec extends ZIOSpecDefault {
             _     <- Cluster.leave
             items <- ZStream
                        .fromQueue(queue)
-                       .collectWhile {
-                         case e: MemberLeft => e
+                       .takeUntil {
+                         case _: MemberLeft => true
+                         case _             => false
                        }
                        .run(ZSink.collectAll)
           } yield items
