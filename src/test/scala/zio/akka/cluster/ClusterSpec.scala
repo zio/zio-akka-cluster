@@ -3,7 +3,7 @@ package zio.akka.cluster
 import akka.actor.ActorSystem
 import akka.cluster.ClusterEvent.MemberLeft
 import com.typesafe.config.{ Config, ConfigFactory }
-import zio.stream.{ ZSink, ZStream }
+import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
@@ -49,7 +49,7 @@ object ClusterSpec extends ZIOSpecDefault {
                          case _: MemberLeft => true
                          case _             => false
                        }
-                       .run(ZSink.collectAll)
+                       .runCollect
           } yield items
         )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem))
       }
