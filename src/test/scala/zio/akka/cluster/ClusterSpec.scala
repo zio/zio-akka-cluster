@@ -1,8 +1,9 @@
 package zio.akka.cluster
 
 import akka.actor.ActorSystem
-import akka.cluster.ClusterEvent.{ MemberLeft, MemberUp }
+import akka.cluster.ClusterEvent.MemberLeft
 import com.typesafe.config.{ Config, ConfigFactory }
+import zio.stream.{ ZSink, ZStream }
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
@@ -42,10 +43,14 @@ object ClusterSpec extends ZIOSpecDefault {
           for {
             queue <- Cluster.clusterEvents()
             _     <- Cluster.leave
-            item  <- queue.take
-          } yield item
-        )(isSubtype[MemberUp](anything) || isSubtype[MemberLeft](anything))
-          .provideLayer(ZLayer.fromManaged(actorSystem))
+            items <- ZStream
+                       .fromQueue(queue)
+                       .collectWhile {
+                         case e: MemberLeft => e
+                       }
+                       .run(ZSink.collectAll)
+          } yield items
+        )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem))
       }
     )
 }
