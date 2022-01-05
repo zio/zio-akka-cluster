@@ -18,14 +18,16 @@ object ShardingSpec extends ZIOSpecDefault {
                                                     |    provider = "cluster"
                                                     |  }
                                                     |  remote {
-                                                    |    netty.tcp {
+                                                    |    enabled-transports = ["akka.remote.artery.canonical"]
+                                                    |    artery.canonical {
                                                     |      hostname = "127.0.0.1"
                                                     |      port = 2551
                                                     |    }
                                                     |  }
                                                     |  cluster {
-                                                    |    seed-nodes = ["akka.tcp://Test@127.0.0.1:2551"]
+                                                    |    seed-nodes = ["akka://Test@127.0.0.1:2551"]
                                                     |    jmx.multi-mbeans-in-same-jvm = on
+                                                    |    downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
                                                     |  }
                                                     |}
       """.stripMargin)
@@ -41,14 +43,16 @@ object ShardingSpec extends ZIOSpecDefault {
                                                      |    provider = "cluster"
                                                      |  }
                                                      |  remote {
-                                                     |    netty.tcp {
+                                                     |    enabled-transports = ["akka.remote.artery.canonical"]
+                                                     |    artery.canonical {
                                                      |      hostname = "127.0.0.1"
                                                      |      port = 2552
                                                      |    }
                                                      |  }
                                                      |  cluster {
-                                                     |    seed-nodes = ["akka.tcp://Test@127.0.0.1:2551"]
+                                                     |    seed-nodes = ["akka://Test@127.0.0.1:2552"]
                                                      |    jmx.multi-mbeans-in-same-jvm = on
+                                                     |    downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
                                                      |  }
                                                      |}
       """.stripMargin)
@@ -190,9 +194,9 @@ object ShardingSpec extends ZIOSpecDefault {
                 onMessage1 = (_: String) => p1.succeed(()).unit
                 onMessage2 = (_: String) => p2.succeed(()).unit
                 sharding1 <- Sharding.start(shardName, onMessage1).provideEnvironment(a1)
-                _         <- Sharding.start(shardName, onMessage2).provideEnvironment(a2)
+                sharding2 <- Sharding.start(shardName, onMessage2).provideEnvironment(a2)
                 _         <- sharding1.send("1", "hi")
-                _         <- sharding1.send("2", "hi")
+                _         <- sharding2.send("2", "hi")
                 _         <- p1.await
                 _         <- p2.await
               } yield ()

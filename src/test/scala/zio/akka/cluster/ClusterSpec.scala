@@ -3,6 +3,7 @@ package zio.akka.cluster
 import akka.actor.ActorSystem
 import akka.cluster.ClusterEvent.MemberLeft
 import com.typesafe.config.{ Config, ConfigFactory }
+import zio.stream.ZStream
 import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
@@ -20,13 +21,15 @@ object ClusterSpec extends ZIOSpecDefault {
                                                           |    provider = "cluster"
                                                           |  }
                                                           |  remote {
-                                                          |    netty.tcp {
+                                                          |    enabled-transports = ["akka.remote.artery.canonical"]
+                                                          |    artery.canonical {
                                                           |      hostname = "127.0.0.1"
                                                           |      port = 2551
                                                           |    }
                                                           |  }
                                                           |  cluster {
-                                                          |    seed-nodes = ["akka.tcp://Test@127.0.0.1:2551"]
+                                                          |    seed-nodes = ["akka://Test@127.0.0.1:2551"]
+                                                          |    downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
                                                           |  }
                                                           |}
                   """.stripMargin)
@@ -40,9 +43,15 @@ object ClusterSpec extends ZIOSpecDefault {
           for {
             queue <- Cluster.clusterEvents()
             _     <- Cluster.leave
-            item  <- queue.take
-          } yield item
-        )(isSubtype[MemberLeft](anything)).provideLayer(ZLayer.fromManaged(actorSystem))
+            items <- ZStream
+                       .fromQueue(queue)
+                       .takeUntil {
+                         case _: MemberLeft => true
+                         case _             => false
+                       }
+                       .runCollect
+          } yield items
+        )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem))
       }
     )
 }
