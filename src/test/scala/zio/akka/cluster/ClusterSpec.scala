@@ -1,5 +1,7 @@
 package zio.akka.cluster
 
+import scala.language.postfixOps
+
 import akka.actor.ActorSystem
 import akka.cluster.ClusterEvent.MemberLeft
 import com.typesafe.config.{ Config, ConfigFactory }
@@ -8,7 +10,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
 import zio.test.ZIOSpecDefault
-import zio.{ Managed, Task, ZLayer }
+import zio._
 
 object ClusterSpec extends ZIOSpecDefault {
 
@@ -42,6 +44,7 @@ object ClusterSpec extends ZIOSpecDefault {
         assertM(
           for {
             queue <- Cluster.clusterEvents()
+            _     <- Clock.sleep(5 seconds)
             _     <- Cluster.leave
             items <- ZStream
                        .fromQueue(queue)
@@ -50,8 +53,9 @@ object ClusterSpec extends ZIOSpecDefault {
                          case _             => false
                        }
                        .runCollect
+                       .timeoutFail(new Exception("Timeout"))(10 seconds)
           } yield items
-        )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem))
+        )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem) ++ Clock.live)
       }
     )
 }
