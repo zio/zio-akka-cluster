@@ -36,10 +36,8 @@ object ClusterSpec extends ZIOSpecDefault {
                                                           |}
                   """.stripMargin)
 
-        val actorSystem: Managed[Throwable, ActorSystem] =
-          Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys =>
-            Task.fromFuture(_ => sys.terminate()).either
-          )
+        val actorSystem: ZIO[Scope, Throwable, ActorSystem] =
+          ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
 
         assertM(
           for {
@@ -55,7 +53,7 @@ object ClusterSpec extends ZIOSpecDefault {
                        .runCollect
                        .timeoutFail(new Exception("Timeout"))(10 seconds)
           } yield items
-        )(isNonEmpty).provideLayer(ZLayer.fromManaged(actorSystem) ++ Clock.live)
+        )(isNonEmpty).provideLayer(ZLayer.scoped(actorSystem) ++ Clock.live)
       }
     )
 }
