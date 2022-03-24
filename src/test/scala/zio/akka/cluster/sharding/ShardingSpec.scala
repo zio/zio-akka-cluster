@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
 import zio.test.ZIOSpecDefault
-import zio.{ ExecutionStrategy, Managed, Promise, Task, UIO, ZIO, ZLayer }
+import zio.{ ExecutionStrategy, Promise, Task, UIO, ZIO, ZLayer }
 import zio._
 
 object ShardingSpec extends ZIOSpecDefault {
@@ -33,9 +33,10 @@ object ShardingSpec extends ZIOSpecDefault {
       """.stripMargin)
 
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
-    ZLayer.fromManaged(
-      Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
-    )
+    ZLayer
+      .scoped(
+        ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+      )
 
   val config2: Config = ConfigFactory.parseString(s"""
                                                      |akka {
@@ -58,11 +59,10 @@ object ShardingSpec extends ZIOSpecDefault {
       """.stripMargin)
 
   val actorSystem2: ZLayer[Any, Throwable, ActorSystem] =
-    ZLayer.fromManaged(
-      Managed.acquireReleaseWith(Task(ActorSystem("Test", config2)))(sys =>
-        Task.fromFuture(_ => sys.terminate()).either
+    ZLayer
+      .scoped(
+        ZIO.acquireRelease(Task(ActorSystem("Test", config2)))(sys => Task.fromFuture(_ => sys.terminate()).either)
       )
-    )
 
   val shardId   = "shard"
   val shardName = "name"
@@ -186,22 +186,24 @@ object ShardingSpec extends ZIOSpecDefault {
       },
       test("work with 2 actor systems") {
         assertM(
-          actorSystem.build.use(a1 =>
-            actorSystem2.build.use(a2 =>
-              for {
-                p1        <- Promise.make[Nothing, Unit]
-                p2        <- Promise.make[Nothing, Unit]
-                onMessage1 = (_: String) => p1.succeed(()).unit
-                onMessage2 = (_: String) => p2.succeed(()).unit
-                sharding1 <- Sharding.start(shardName, onMessage1).provideEnvironment(a1)
-                sharding2 <- Sharding.start(shardName, onMessage2).provideEnvironment(a2)
-                _         <- sharding1.send("1", "hi")
-                _         <- sharding2.send("2", "hi")
-                _         <- p1.await
-                _         <- p2.await
-              } yield ()
+          ZIO.scoped {
+            actorSystem.build.flatMap(a1 =>
+              actorSystem2.build.flatMap(a2 =>
+                for {
+                  p1        <- Promise.make[Nothing, Unit]
+                  p2        <- Promise.make[Nothing, Unit]
+                  onMessage1 = (_: String) => p1.succeed(()).unit
+                  onMessage2 = (_: String) => p2.succeed(()).unit
+                  sharding1 <- Sharding.start(shardName, onMessage1).provideEnvironment(a1)
+                  sharding2 <- Sharding.start(shardName, onMessage2).provideEnvironment(a2)
+                  _         <- sharding1.send("1", "hi")
+                  _         <- sharding2.send("2", "hi")
+                  _         <- p1.await
+                  _         <- p2.await
+                } yield ()
+              )
             )
-          )
+          }
         )(isUnit)
       },
       test("provide proper environment to onMessage") {
@@ -212,7 +214,7 @@ object ShardingSpec extends ZIOSpecDefault {
           ZIO.serviceWithZIO[TestService](_.doSomething())
 
         val l = ZLayer.succeed(new TestService {
-          override def doSomething(): UIO[String] = UIO("test")
+          override def doSomething(): UIO[String] = UIO.succeed("test")
         })
 
         assertM(

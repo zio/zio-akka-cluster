@@ -61,9 +61,9 @@ object Cluster {
     initialStateAsEvents: Boolean = false
   ): ZIO[ActorSystem, Throwable, Unit] =
     for {
-      rts         <- Task.runtime
+      rts         <- Task.runtime[ActorSystem]
       actorSystem <- ZIO.service[ActorSystem]
-      _           <- Task(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
+      _           <- Task.attempt(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 
   private[cluster] class SubscriberActor(

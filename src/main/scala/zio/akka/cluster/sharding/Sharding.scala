@@ -139,10 +139,10 @@ object Sharding {
       override def context: ActorContext                         = actorContext
       override def id: String                                    = actorContext.self.path.name
       override def state: Ref[Option[State]]                     = ref
-      override def stop: UIO[Unit]                               = UIO(actorContext.stop(self))
-      override def passivate: UIO[Unit]                          = UIO(actorContext.parent ! Passivate(PoisonPill))
-      override def passivateAfter(duration: Duration): UIO[Unit] = UIO(actorContext.self ! SetTimeout(duration))
-      override def replyToSender[M](msg: M): Task[Unit]          = Task(actorContext.sender() ! msg)
+      override def stop: UIO[Unit]                               = UIO.succeed(actorContext.stop(self))
+      override def passivate: UIO[Unit]                          = UIO.succeed(actorContext.parent ! Passivate(PoisonPill))
+      override def passivateAfter(duration: Duration): UIO[Unit] = UIO.succeed(actorContext.self ! SetTimeout(duration))
+      override def replyToSender[M](msg: M): Task[Unit]          = Task.attempt(actorContext.sender() ! msg)
     }
     val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(service)
 

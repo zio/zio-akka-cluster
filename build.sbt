@@ -1,8 +1,8 @@
 val mainScala = "2.13.7"
 val allScala  = Seq("2.12.15", mainScala)
 
-val zioVersion  = "2.0.0-RC1"
-val akkaVersion = "2.6.18"
+val zioVersion  = "2.0.0-RC3"
+val akkaVersion = "2.6.19"
 
 organization := "dev.zio"
 homepage := Some(url("https://github.com/zio/zio-akka-cluster"))

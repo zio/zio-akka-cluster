@@ -6,7 +6,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
 import zio.test.ZIOSpecDefault
-import zio.{ ExecutionStrategy, Managed, Task, ZLayer }
+import zio.{ ExecutionStrategy, Task, ZIO, ZLayer }
 
 object PubSubSpec extends ZIOSpecDefault {
 
@@ -30,9 +30,10 @@ object PubSubSpec extends ZIOSpecDefault {
            """.stripMargin)
 
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
-    ZLayer.fromManaged(
-      Managed.acquireReleaseWith(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
-    )
+    ZLayer
+      .scoped(
+        ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+      )
 
   val topic = "topic"
   val msg   = "yo"
