@@ -37,7 +37,9 @@ object ClusterSpec extends ZIOSpecDefault {
                   """.stripMargin)
 
         val actorSystem: ZIO[Scope, Throwable, ActorSystem] =
-          ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+          ZIO.acquireRelease(Task.succeed(ActorSystem("Test", config)))(sys =>
+            Task.fromFuture(_ => sys.terminate()).either
+          )
 
         assertM(
           for {

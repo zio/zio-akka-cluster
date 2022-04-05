@@ -32,7 +32,9 @@ object PubSubSpec extends ZIOSpecDefault {
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+        ZIO.acquireRelease(Task.succeed(ActorSystem("Test", config)))(sys =>
+          Task.fromFuture(_ => sys.terminate()).either
+        )
       )
 
   val topic = "topic"

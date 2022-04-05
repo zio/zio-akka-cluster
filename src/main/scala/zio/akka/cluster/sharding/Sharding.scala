@@ -46,7 +46,7 @@ object Sharding {
     for {
       rts            <- ZIO.runtime[ActorSystem with R]
       actorSystem     = rts.environment.get[ActorSystem]
-      shardingRegion <- Task(
+      shardingRegion <- Task.attempt(
                           ClusterSharding(actorSystem).start(
                             typeName = name,
                             entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
@@ -87,7 +87,7 @@ object Sharding {
     for {
       rts            <- ZIO.runtime[ActorSystem]
       actorSystem     = rts.environment.get
-      shardingRegion <- Task(
+      shardingRegion <- Task.attempt(
                           ClusterSharding(actorSystem).startProxy(
                             typeName = name,
                             role,
@@ -114,13 +114,13 @@ object Sharding {
     val getShardingRegion: ActorRef
 
     override def send(entityId: String, data: Msg): Task[Unit] =
-      Task(getShardingRegion ! sharding.MessageEnvelope(entityId, MessagePayload(data)))
+      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, MessagePayload(data)))
 
     override def stop(entityId: String): Task[Unit] =
-      Task(getShardingRegion ! sharding.MessageEnvelope(entityId, PoisonPillPayload))
+      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PoisonPillPayload))
 
     override def passivate(entityId: String): Task[Unit] =
-      Task(getShardingRegion ! sharding.MessageEnvelope(entityId, PassivatePayload))
+      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PassivatePayload))
 
     override def ask[R](entityId: String, data: Msg)(implicit tag: ClassTag[R], proof: R =!= Nothing): Task[R] =
       Task.fromFuture(_ =>
