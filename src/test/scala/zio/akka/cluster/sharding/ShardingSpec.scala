@@ -35,7 +35,7 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task.succeed(ActorSystem("Test", config)))(sys =>
+        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
           Task.fromFuture(_ => sys.terminate()).either
         )
       )
@@ -63,7 +63,7 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem2: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task.succeed(ActorSystem("Test", config2)))(sys =>
+        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config2)))(sys =>
           Task.fromFuture(_ => sys.terminate()).either
         )
       )

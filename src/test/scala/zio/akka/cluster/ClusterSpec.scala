@@ -37,7 +37,7 @@ object ClusterSpec extends ZIOSpecDefault {
                   """.stripMargin)
 
         val actorSystem: ZIO[Scope, Throwable, ActorSystem] =
-          ZIO.acquireRelease(Task.succeed(ActorSystem("Test", config)))(sys =>
+          ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
             Task.fromFuture(_ => sys.terminate()).either
           )
 
@@ -55,7 +55,7 @@ object ClusterSpec extends ZIOSpecDefault {
                        .runCollect
                        .timeoutFail(new Exception("Timeout"))(10 seconds)
           } yield items
-        )(isNonEmpty).provideLayer(ZLayer.scoped(actorSystem) ++ Clock.live)
+        )(isNonEmpty).provideLayer(ZLayer.scoped(actorSystem))
       }
     )
 }
