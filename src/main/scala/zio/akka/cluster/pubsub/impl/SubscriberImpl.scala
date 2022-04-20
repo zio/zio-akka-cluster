@@ -15,7 +15,7 @@ private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
     for {
       rts        <- Task.runtime[Any]
       subscribed <- Promise.make[Nothing, Unit]
-      _          <- Task(
+      _          <- Task.attempt(
                       getActorSystem.actorOf(Props(new SubscriberActor[A](getMediator, topic, group, rts, queue, subscribed)))
                     )
       _          <- subscribed.await

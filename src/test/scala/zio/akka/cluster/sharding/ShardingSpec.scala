@@ -35,7 +35,9 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
+          Task.fromFuture(_ => sys.terminate()).either
+        )
       )
 
   val config2: Config = ConfigFactory.parseString(s"""
@@ -61,7 +63,9 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem2: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task(ActorSystem("Test", config2)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config2)))(sys =>
+          Task.fromFuture(_ => sys.terminate()).either
+        )
       )
 
   val shardId   = "shard"
@@ -129,10 +133,9 @@ object ShardingSpec extends ZIOSpecDefault {
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
             _        <- sharding.send(shardId, "die")
-            _        <- ZIO.sleep(3 seconds)
-                          .provideLayer(
-                            Clock.live
-                          ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+            _        <- Clock.sleep(
+                          3 seconds
+                        ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
             _        <- sharding.send(shardId, "get")
             res      <- p.await
           } yield res
@@ -151,10 +154,9 @@ object ShardingSpec extends ZIOSpecDefault {
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
             _        <- sharding.passivate(shardId)
-            _        <- ZIO.sleep(3 seconds)
-                          .provideLayer(
-                            Clock.live
-                          ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+            _        <- Clock.sleep(
+                          3 seconds
+                        ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
             _        <- sharding.send(shardId, "get")
             res      <- p.await
           } yield res
@@ -175,10 +177,9 @@ object ShardingSpec extends ZIOSpecDefault {
             sharding <- Sharding.start(shardName, onMessage)
             _        <- sharding.send(shardId, "set")
             _        <- sharding.send(shardId, "timeout")
-            _        <- ZIO.sleep(3 seconds)
-                          .provideLayer(
-                            Clock.live
-                          ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
+            _        <- Clock.sleep(
+                          3 seconds
+                        ) // give time to the ShardCoordinator to notice the death of the actor and recreate one
             _        <- sharding.send(shardId, "get")
             res      <- p.await
           } yield res
@@ -227,6 +228,8 @@ object ShardingSpec extends ZIOSpecDefault {
           } yield res
         )(equalTo("test")).provideLayer(actorSystem ++ l)
       }
-    ) @@ TestAspect.executionStrategy(ExecutionStrategy.Sequential) @@ TestAspect.timeout(30.seconds)
+    ) @@ TestAspect.executionStrategy(ExecutionStrategy.Sequential) @@ TestAspect.timeout(
+      30.seconds
+    ) @@ TestAspect.withLiveClock
 
 }

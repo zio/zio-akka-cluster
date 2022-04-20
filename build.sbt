@@ -1,7 +1,7 @@
 val mainScala = "2.13.7"
 val allScala  = Seq("2.12.15", mainScala)
 
-val zioVersion  = "2.0.0-RC3"
+val zioVersion  = "2.0.0-RC5"
 val akkaVersion = "2.6.19"
 
 organization := "dev.zio"

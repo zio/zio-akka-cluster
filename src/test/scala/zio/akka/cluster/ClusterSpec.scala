@@ -26,18 +26,20 @@ object ClusterSpec extends ZIOSpecDefault {
                                                           |    enabled-transports = ["akka.remote.artery.canonical"]
                                                           |    artery.canonical {
                                                           |      hostname = "127.0.0.1"
-                                                          |      port = 2551
+                                                          |      port = 2554
                                                           |    }
                                                           |  }
                                                           |  cluster {
-                                                          |    seed-nodes = ["akka://Test@127.0.0.1:2551"]
+                                                          |    seed-nodes = ["akka://Test@127.0.0.1:2554"]
                                                           |    downing-provider-class = "akka.cluster.sbr.SplitBrainResolverProvider"
                                                           |  }
                                                           |}
                   """.stripMargin)
 
         val actorSystem: ZIO[Scope, Throwable, ActorSystem] =
-          ZIO.acquireRelease(Task(ActorSystem("Test", config)))(sys => Task.fromFuture(_ => sys.terminate()).either)
+          ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
+            Task.fromFuture(_ => sys.terminate()).either
+          )
 
         assertM(
           for {
@@ -53,7 +55,7 @@ object ClusterSpec extends ZIOSpecDefault {
                        .runCollect
                        .timeoutFail(new Exception("Timeout"))(10 seconds)
           } yield items
-        )(isNonEmpty).provideLayer(ZLayer.scoped(actorSystem) ++ Clock.live)
+        )(isNonEmpty).provideLayer(ZLayer.scoped(actorSystem))
       }
-    )
+    ) @@ TestAspect.withLiveClock
 }

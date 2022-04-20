@@ -10,7 +10,7 @@ object Cluster {
   private val cluster: ZIO[ActorSystem, Throwable, akka.cluster.Cluster] =
     for {
       actorSystem <- ZIO.service[ActorSystem]
-      cluster     <- Task(akka.cluster.Cluster(actorSystem))
+      cluster     <- Task.attempt(akka.cluster.Cluster(actorSystem))
     } yield cluster
 
   /**
@@ -19,7 +19,7 @@ object Cluster {
   val clusterState: ZIO[ActorSystem, Throwable, CurrentClusterState] =
     for {
       cluster <- cluster
-      state   <- Task(cluster.state)
+      state   <- Task.attempt(cluster.state)
     } yield state
 
   /**
@@ -28,7 +28,7 @@ object Cluster {
   def join(seedNodes: List[Address]): ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
-      _       <- Task(cluster.joinSeedNodes(seedNodes))
+      _       <- Task.attempt(cluster.joinSeedNodes(seedNodes))
     } yield ()
 
   /**
@@ -37,7 +37,7 @@ object Cluster {
   val leave: ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
-      _       <- Task(cluster.leave(cluster.selfAddress))
+      _       <- Task.attempt(cluster.leave(cluster.selfAddress))
     } yield ()
 
   /**
