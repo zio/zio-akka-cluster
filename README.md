@@ -111,11 +111,14 @@ This library wraps messages inside of a `zio.akka.cluster.pubsub.MessageEnvelope
 
 ```scala
 import akka.actor.ActorSystem
-import zio.{ Managed, Task, ZLayer }
+import zio.{ ZIO, ZLayer }
 import zio.akka.cluster.pubsub.PubSub
 
 val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
-  ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
+  ZLayer
+    .scoped(
+      ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test")))(sys => ZIO.fromFuture(_ => sys.terminate()).either)
+    )
 
 (for {
   pubSub   <- PubSub.createPubSub[String]
@@ -176,10 +179,13 @@ This library wraps messages inside of a `zio.akka.cluster.sharding.MessageEnvelo
 ```scala
 import akka.actor.ActorSystem
 import zio.akka.cluster.sharding.{ Entity, Sharding }
-import zio.{ Managed, Task, ZIO, ZLayer }
+import zio.{ ZIO, ZLayer }
 
 val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
-  ZLayer.fromManaged(Managed.acquireReleaseWith(Task(ActorSystem("Test")))(sys => Task.fromFuture(_ => sys.terminate()).either))
+  ZLayer
+    .scoped(
+      ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test")))(sys => ZIO.fromFuture(_ => sys.terminate()).either)
+    )
 
 val behavior: String => ZIO[Entity[Int], Nothing, Unit] = {
   case "+" => ZIO.serviceWithZIO[Entity[Int]](_.state.update(x => Some(x.getOrElse(0) + 1)))
