@@ -3,14 +3,14 @@ package zio.akka.cluster
 import akka.actor.{ Actor, ActorSystem, Address, PoisonPill, Props }
 import akka.cluster.ClusterEvent._
 import zio.Exit.{ Failure, Success }
-import zio.{ Queue, Runtime, Task, ZIO }
+import zio.{ Queue, Runtime, ZIO }
 
 object Cluster {
 
   private val cluster: ZIO[ActorSystem, Throwable, akka.cluster.Cluster] =
     for {
       actorSystem <- ZIO.service[ActorSystem]
-      cluster     <- Task.attempt(akka.cluster.Cluster(actorSystem))
+      cluster     <- ZIO.attempt(akka.cluster.Cluster(actorSystem))
     } yield cluster
 
   /**
@@ -19,7 +19,7 @@ object Cluster {
   val clusterState: ZIO[ActorSystem, Throwable, CurrentClusterState] =
     for {
       cluster <- cluster
-      state   <- Task.attempt(cluster.state)
+      state   <- ZIO.attempt(cluster.state)
     } yield state
 
   /**
@@ -28,7 +28,7 @@ object Cluster {
   def join(seedNodes: List[Address]): ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
-      _       <- Task.attempt(cluster.joinSeedNodes(seedNodes))
+      _       <- ZIO.attempt(cluster.joinSeedNodes(seedNodes))
     } yield ()
 
   /**
@@ -37,7 +37,7 @@ object Cluster {
   val leave: ZIO[ActorSystem, Throwable, Unit] =
     for {
       cluster <- cluster
-      _       <- Task.attempt(cluster.leave(cluster.selfAddress))
+      _       <- ZIO.attempt(cluster.leave(cluster.selfAddress))
     } yield ()
 
   /**
@@ -61,9 +61,9 @@ object Cluster {
     initialStateAsEvents: Boolean = false
   ): ZIO[ActorSystem, Throwable, Unit] =
     for {
-      rts         <- Task.runtime[ActorSystem]
+      rts         <- ZIO.runtime[ActorSystem]
       actorSystem <- ZIO.service[ActorSystem]
-      _           <- Task.attempt(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
+      _           <- ZIO.attempt(actorSystem.actorOf(Props(new SubscriberActor(rts, queue, initialStateAsEvents))))
     } yield ()
 
   private[cluster] class SubscriberActor(

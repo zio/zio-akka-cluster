@@ -6,7 +6,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
 import zio.test.ZIOSpecDefault
-import zio.{ ExecutionStrategy, Task, ZIO, ZLayer }
+import zio.{ ExecutionStrategy, ZIO, ZLayer }
 
 object PubSubSpec extends ZIOSpecDefault {
 
@@ -32,18 +32,16 @@ object PubSubSpec extends ZIOSpecDefault {
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
-          Task.fromFuture(_ => sys.terminate()).either
-        )
+        ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test", config)))(sys => ZIO.fromFuture(_ => sys.terminate()).either)
       )
 
   val topic = "topic"
   val msg   = "yo"
 
-  def spec: ZSpec[TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Any] =
     suite("PubSubSpec")(
       test("send and receive a single message") {
-        assertM(
+        assertZIO(
           for {
             pubSub <- PubSub.createPubSub[String]
             queue  <- pubSub.listen(topic)
@@ -53,7 +51,7 @@ object PubSubSpec extends ZIOSpecDefault {
         )(equalTo(msg)).provideLayer(actorSystem)
       },
       test("support multiple subscribers") {
-        assertM(
+        assertZIO(
           for {
             pubSub <- PubSub.createPubSub[String]
             queue1 <- pubSub.listen(topic)
@@ -66,7 +64,7 @@ object PubSubSpec extends ZIOSpecDefault {
       },
       test("support multiple publishers") {
         val msg2 = "what's up"
-        assertM(
+        assertZIO(
           for {
             pubSub <- PubSub.createPubSub[String]
             queue  <- pubSub.listen(topic)
@@ -79,7 +77,7 @@ object PubSubSpec extends ZIOSpecDefault {
       },
       test("send only one message to a single group") {
         val group = "group"
-        assertM(
+        assertZIO(
           for {
             pubSub <- PubSub.createPubSub[String]
             queue1 <- pubSub.listen(topic, Some(group))
@@ -93,7 +91,7 @@ object PubSubSpec extends ZIOSpecDefault {
       test("send one message to each group") {
         val group1 = "group1"
         val group2 = "group2"
-        assertM(
+        assertZIO(
           for {
             pubSub <- PubSub.createPubSub[String]
             queue1 <- pubSub.listen(topic, Some(group1))

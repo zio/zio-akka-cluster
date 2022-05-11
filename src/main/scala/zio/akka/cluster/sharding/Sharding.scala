@@ -46,7 +46,7 @@ object Sharding {
     for {
       rts            <- ZIO.runtime[ActorSystem with R]
       actorSystem     = rts.environment.get[ActorSystem]
-      shardingRegion <- Task.attempt(
+      shardingRegion <- ZIO.attempt(
                           ClusterSharding(actorSystem).start(
                             typeName = name,
                             entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
@@ -87,7 +87,7 @@ object Sharding {
     for {
       rts            <- ZIO.runtime[ActorSystem]
       actorSystem     = rts.environment.get
-      shardingRegion <- Task.attempt(
+      shardingRegion <- ZIO.attempt(
                           ClusterSharding(actorSystem).startProxy(
                             typeName = name,
                             role,
@@ -114,16 +114,16 @@ object Sharding {
     val getShardingRegion: ActorRef
 
     override def send(entityId: String, data: Msg): Task[Unit] =
-      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, MessagePayload(data)))
+      ZIO.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, MessagePayload(data)))
 
     override def stop(entityId: String): Task[Unit] =
-      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PoisonPillPayload))
+      ZIO.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PoisonPillPayload))
 
     override def passivate(entityId: String): Task[Unit] =
-      Task.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PassivatePayload))
+      ZIO.attempt(getShardingRegion ! sharding.MessageEnvelope(entityId, PassivatePayload))
 
     override def ask[R](entityId: String, data: Msg)(implicit tag: ClassTag[R], proof: R =!= Nothing): Task[R] =
-      Task.fromFuture(_ =>
+      ZIO.fromFuture(_ =>
         (getShardingRegion ? sharding.MessageEnvelope(entityId, MessagePayload(data)))
           .mapTo[R]
       )
@@ -139,10 +139,10 @@ object Sharding {
       override def context: ActorContext                         = actorContext
       override def id: String                                    = actorContext.self.path.name
       override def state: Ref[Option[State]]                     = ref
-      override def stop: UIO[Unit]                               = UIO.succeed(actorContext.stop(self))
-      override def passivate: UIO[Unit]                          = UIO.succeed(actorContext.parent ! Passivate(PoisonPill))
-      override def passivateAfter(duration: Duration): UIO[Unit] = UIO.succeed(actorContext.self ! SetTimeout(duration))
-      override def replyToSender[M](msg: M): Task[Unit]          = Task.attempt(actorContext.sender() ! msg)
+      override def stop: UIO[Unit]                               = ZIO.succeed(actorContext.stop(self))
+      override def passivate: UIO[Unit]                          = ZIO.succeed(actorContext.parent ! Passivate(PoisonPill))
+      override def passivateAfter(duration: Duration): UIO[Unit] = ZIO.succeed(actorContext.self ! SetTimeout(duration))
+      override def replyToSender[M](msg: M): Task[Unit]          = ZIO.attempt(actorContext.sender() ! msg)
     }
     val entity: ZLayer[Any, Nothing, Entity[State]] = ZLayer.succeed(service)
 
