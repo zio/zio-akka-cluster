@@ -31,7 +31,7 @@ trait PubSub[A] extends Publisher[A] with Subscriber[A]
 object PubSub {
 
   private def getMediator(actorSystem: ActorSystem): Task[ActorRef] =
-    Task.attempt(DistributedPubSub(actorSystem).mediator)
+    ZIO.attempt(DistributedPubSub(actorSystem).mediator)
 
   /**
    *  Creates a new `Publisher[A]`.

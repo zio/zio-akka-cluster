@@ -7,7 +7,7 @@ import zio.test.Assertion._
 import zio.test._
 import zio.test.TestEnvironment
 import zio.test.ZIOSpecDefault
-import zio.{ ExecutionStrategy, Promise, Task, UIO, ZIO, ZLayer }
+import zio.{ ExecutionStrategy, Promise, UIO, ZIO, ZLayer }
 import zio._
 
 object ShardingSpec extends ZIOSpecDefault {
@@ -35,9 +35,7 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
-          Task.fromFuture(_ => sys.terminate()).either
-        )
+        ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test", config)))(sys => ZIO.fromFuture(_ => sys.terminate()).either)
       )
 
   val config2: Config = ConfigFactory.parseString(s"""
@@ -63,8 +61,8 @@ object ShardingSpec extends ZIOSpecDefault {
   val actorSystem2: ZLayer[Any, Throwable, ActorSystem] =
     ZLayer
       .scoped(
-        ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config2)))(sys =>
-          Task.fromFuture(_ => sys.terminate()).either
+        ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test", config2)))(sys =>
+          ZIO.fromFuture(_ => sys.terminate()).either
         )
       )
 
@@ -72,10 +70,10 @@ object ShardingSpec extends ZIOSpecDefault {
   val shardName = "name"
   val msg       = "yo"
 
-  def spec: ZSpec[TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Any] =
     suite("ShardingSpec")(
       test("send and receive a single message") {
-        assertM(
+        assertZIO(
           for {
             p        <- Promise.make[Nothing, String]
             onMessage = (msg: String) => p.succeed(msg).unit
@@ -88,7 +86,7 @@ object ShardingSpec extends ZIOSpecDefault {
       test("send and receive a message using ask") {
         val onMessage: String => ZIO[Entity[Any], Nothing, Unit] =
           incomingMsg => ZIO.serviceWithZIO[Entity[Any]](_.replyToSender(incomingMsg).orDie)
-        assertM(
+        assertZIO(
           for {
             sharding <- Sharding.start(shardName, onMessage)
             reply    <- sharding.ask[String](shardId, msg)
@@ -96,7 +94,7 @@ object ShardingSpec extends ZIOSpecDefault {
         )(equalTo(msg)).provideLayer(actorSystem)
       },
       test("gather state") {
-        assertM(
+        assertZIO(
           for {
             p         <- Promise.make[Nothing, Boolean]
             onMessage  = (_: String) =>
@@ -120,7 +118,7 @@ object ShardingSpec extends ZIOSpecDefault {
         )(equalTo((None, true))).provideLayer(actorSystem)
       },
       test("kill itself") {
-        assertM(
+        assertZIO(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
@@ -142,7 +140,7 @@ object ShardingSpec extends ZIOSpecDefault {
         )(isNone).provideLayer(actorSystem)
       },
       test("passivate") {
-        assertM(
+        assertZIO(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
@@ -163,7 +161,7 @@ object ShardingSpec extends ZIOSpecDefault {
         )(isNone).provideLayer(actorSystem)
       },
       test("passivateAfter") {
-        assertM(
+        assertZIO(
           for {
             p        <- Promise.make[Nothing, Option[Unit]]
             onMessage = (msg: String) =>
@@ -186,7 +184,7 @@ object ShardingSpec extends ZIOSpecDefault {
         )(isNone).provideLayer(actorSystem)
       },
       test("work with 2 actor systems") {
-        assertM(
+        assertZIO(
           ZIO.scoped {
             actorSystem.build.flatMap(a1 =>
               actorSystem2.build.flatMap(a2 =>
@@ -215,10 +213,10 @@ object ShardingSpec extends ZIOSpecDefault {
           ZIO.serviceWithZIO[TestService](_.doSomething())
 
         val l = ZLayer.succeed(new TestService {
-          override def doSomething(): UIO[String] = UIO.succeed("test")
+          override def doSomething(): UIO[String] = ZIO.succeed("test")
         })
 
-        assertM(
+        assertZIO(
           for {
             p        <- Promise.make[Nothing, String]
             onMessage = (_: String) => (doSomething flatMap p.succeed).unit

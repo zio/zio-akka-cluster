@@ -5,7 +5,7 @@ import akka.cluster.pubsub.DistributedPubSubMediator.{ Subscribe, SubscribeAck }
 import zio.Exit.{ Failure, Success }
 import zio.akka.cluster.pubsub.impl.SubscriberImpl.SubscriberActor
 import zio.akka.cluster.pubsub.{ MessageEnvelope, Subscriber }
-import zio.{ Promise, Queue, Runtime, Task }
+import zio.{ Promise, Queue, Runtime, Task, ZIO }
 
 private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
   val getActorSystem: ActorSystem
@@ -13,9 +13,9 @@ private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
 
   override def listenWith(topic: String, queue: Queue[A], group: Option[String] = None): Task[Unit] =
     for {
-      rts        <- Task.runtime[Any]
+      rts        <- ZIO.runtime[Any]
       subscribed <- Promise.make[Nothing, Unit]
-      _          <- Task.attempt(
+      _          <- ZIO.attempt(
                       getActorSystem.actorOf(Props(new SubscriberActor[A](getMediator, topic, group, rts, queue, subscribed)))
                     )
       _          <- subscribed.await

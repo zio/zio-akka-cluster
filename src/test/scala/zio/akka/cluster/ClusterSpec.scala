@@ -14,7 +14,7 @@ import zio._
 
 object ClusterSpec extends ZIOSpecDefault {
 
-  def spec: ZSpec[TestEnvironment, Any] =
+  def spec: Spec[TestEnvironment, Any] =
     suite("ClusterSpec")(
       test("receive cluster events") {
         val config: Config = ConfigFactory.parseString(s"""
@@ -37,11 +37,11 @@ object ClusterSpec extends ZIOSpecDefault {
                   """.stripMargin)
 
         val actorSystem: ZIO[Scope, Throwable, ActorSystem] =
-          ZIO.acquireRelease(Task.attempt(ActorSystem("Test", config)))(sys =>
-            Task.fromFuture(_ => sys.terminate()).either
+          ZIO.acquireRelease(ZIO.attempt(ActorSystem("Test", config)))(sys =>
+            ZIO.fromFuture(_ => sys.terminate()).either
           )
 
-        assertM(
+        assertZIO(
           for {
             queue <- Cluster.clusterEvents()
             _     <- Clock.sleep(5 seconds)
