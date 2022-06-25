@@ -2,8 +2,7 @@ package zio.akka.cluster
 
 import akka.actor.{ Actor, ActorSystem, Address, PoisonPill, Props }
 import akka.cluster.ClusterEvent._
-import zio.Exit.{ Failure, Success }
-import zio.{ Queue, Runtime, ZIO }
+import zio.{ Exit, Queue, Runtime, Unsafe, ZIO }
 
 object Cluster {
 
@@ -78,9 +77,12 @@ object Cluster {
 
     def receive: Actor.Receive = {
       case ev: ClusterDomainEvent =>
-        rts.unsafeRunAsyncWith(queue.offer(ev)) {
-          case Success(_)     => ()
-          case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
+        Unsafe.unsafeCompat { implicit u =>
+          val fiber = rts.unsafe.fork(queue.offer(ev))
+          fiber.unsafe.addObserver {
+            case Exit.Success(_) => ()
+            case Exit.Failure(c) => if (c.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
+          }
         }
         ()
       case _                      => ()

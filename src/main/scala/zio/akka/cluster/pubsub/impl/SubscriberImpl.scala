@@ -2,10 +2,9 @@ package zio.akka.cluster.pubsub.impl
 
 import akka.actor.{ Actor, ActorRef, ActorSystem, PoisonPill, Props }
 import akka.cluster.pubsub.DistributedPubSubMediator.{ Subscribe, SubscribeAck }
-import zio.Exit.{ Failure, Success }
 import zio.akka.cluster.pubsub.impl.SubscriberImpl.SubscriberActor
 import zio.akka.cluster.pubsub.{ MessageEnvelope, Subscriber }
-import zio.{ Promise, Queue, Runtime, Task, ZIO }
+import zio.{ Exit, Promise, Queue, Runtime, Task, Unsafe, ZIO }
 
 private[pubsub] trait SubscriberImpl[A] extends Subscriber[A] {
   val getActorSystem: ActorSystem
@@ -36,12 +35,17 @@ object SubscriberImpl {
 
     def receive: Actor.Receive = {
       case SubscribeAck(_)      =>
-        rts.unsafeRunSync(subscribed.succeed(()))
+        Unsafe.unsafeCompat { implicit u =>
+          rts.unsafe.run(subscribed.succeed(())).getOrThrow()
+        }
         ()
       case MessageEnvelope(msg) =>
-        rts.unsafeRunAsyncWith(queue.offer(msg.asInstanceOf[A])) {
-          case Success(_)     => ()
-          case Failure(cause) => if (cause.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
+        Unsafe.unsafeCompat { implicit u =>
+          val fiber = rts.unsafe.fork(queue.offer(msg.asInstanceOf[A]))
+          fiber.unsafe.addObserver {
+            case Exit.Success(_) => ()
+            case Exit.Failure(c) => if (c.isInterrupted) self ! PoisonPill // stop listening if the queue was shut down
+          }
         }
         ()
     }
