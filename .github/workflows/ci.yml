@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: ['master', 'series/2.x']
+    branches: ['series/1.x', 'series/2.x']
   release:
     types:
       - published
