@@ -9,7 +9,7 @@ import akka.pattern.{ ask => askPattern }
 import akka.util.Timeout
 import zio.akka.cluster.sharding
 import zio.akka.cluster.sharding.MessageEnvelope.{ MessagePayload, PassivatePayload, PoisonPillPayload }
-import zio.{ =!=, Ref, Runtime, Tag, Task, UIO, ZIO, ZLayer }
+import zio.{ =!=, Ref, Runtime, Tag, Task, UIO, Unsafe, ZIO, ZLayer }
 
 /**
  *  A `Sharding[M]` is able to send messages of type `M` to a sharded entity or to stop one.
@@ -133,7 +133,10 @@ object Sharding {
     onMessage: Msg => ZIO[Entity[State] with R, Nothing, Unit]
   ) extends Actor {
 
-    val ref: Ref[Option[State]]                     = rts.unsafeRun(Ref.make[Option[State]](None))
+    val ref: Ref[Option[State]]                     =
+      Unsafe.unsafeCompat { implicit u =>
+        rts.unsafe.run(Ref.make[Option[State]](None)).getOrThrow()
+      }
     val actorContext: ActorContext                  = context
     val service: Entity.Service[State]              = new Entity.Service[State] {
       override def context: ActorContext                         = actorContext
@@ -154,7 +157,9 @@ object Sharding {
       case p: Passivate         =>
         actorContext.parent ! p
       case MessagePayload(msg)  =>
-        rts.unsafeRunSync(onMessage(msg.asInstanceOf[Msg]).provideSomeLayer[R](entity))
+        Unsafe.unsafeCompat { implicit u =>
+          rts.unsafe.run(onMessage(msg.asInstanceOf[Msg]).provideSomeLayer[R](entity)).getOrThrow()
+        }
         ()
       case _                    =>
     }
