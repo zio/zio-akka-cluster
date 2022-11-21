@@ -82,7 +82,7 @@ lazy val docs = project
   .in(file("zio-akka-cluster-docs"))
   .settings(
     publish / skip := true,
-    moduleName     := "zio-akka-cluster-docs",
+    moduleName := "zio-akka-cluster-docs",
     scalacOptions -= "-Yno-imports",
     scalacOptions -= "-Xfatal-warnings"
   )
