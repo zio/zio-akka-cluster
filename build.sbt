@@ -5,7 +5,7 @@ val zioVersion  = "2.0.0"
 val akkaVersion = "2.6.19"
 
 organization := "dev.zio"
-homepage := Some(url("https://github.com/zio/zio-akka-cluster"))
+homepage := Some(url("https://zio.dev/zio-akka-cluster"))
 name := "zio-akka-cluster"
 licenses := List("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0"))
 scalaVersion := mainScala
@@ -77,3 +77,13 @@ crossScalaVersions := allScala
 
 addCommandAlias("fmt", "all scalafmtSbt scalafmt test:scalafmt")
 addCommandAlias("check", "all scalafmtSbtCheck scalafmtCheck test:scalafmtCheck")
+
+lazy val docs = project
+  .in(file("zio-akka-cluster-docs"))
+  .settings(
+    publish / skip := true,
+    moduleName     := "zio-akka-cluster-docs",
+    scalacOptions -= "-Yno-imports",
+    scalacOptions -= "-Xfatal-warnings"
+  )
+  .enablePlugins(WebsitePlugin)
