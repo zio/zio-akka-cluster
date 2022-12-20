@@ -1,6 +1,14 @@
 const sidebars = {
   sidebar: [
-    "index"
+    {
+      type: "category",
+      label: "ZIO Akka Cluster",
+      collapsed: false,
+      link: { type: "doc", id: "index" },
+      items: [
+        "dive-into-zio-akka-cluster" 
+      ]
+    }
   ]
 };
 
