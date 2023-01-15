@@ -1,3 +1,5 @@
+import sbt.Project.projectToLocalProject
+
 val mainScala = "2.13.7"
 val allScala  = Seq("2.12.15", mainScala)
 
@@ -60,8 +62,11 @@ inThisBuild(
   )
 )
 
+lazy val root =
+  project.in(file(".")).aggregate(`zio-akka-cluster`, docs)
+
 lazy val `zio-akka-cluster` = project
-  .in(file("."))
+  .in(file("zio-akka-cluster"))
   .settings(
     name := "zio-akka-cluster",
     libraryDependencies ++= Seq(
@@ -90,12 +95,9 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "zio-akka-cluster-docs",
     projectName := "ZIO Akka Cluster",
-    badgeInfo := Some(
-      BadgeInfo(
-        artifact = "zio-akka-cluster_2.12",
-        projectStage = ProjectStage.ProductionReady
-      )
-    ),
+    mainModuleName := (`zio-akka-cluster` / moduleName).value,
+    projectStage := ProjectStage.ProductionReady,
+    ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(`zio-akka-cluster`),
     docsPublishBranch := "series/2.x"
   )
   .enablePlugins(WebsitePlugin)
