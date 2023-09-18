@@ -51,16 +51,15 @@ object Sharding {
                             typeName = name,
                             entityProps = Props(new ShardEntity[R, Msg, State](rts)(onMessage)),
                             settings = ClusterShardingSettings(actorSystem),
-                            extractEntityId = {
-                              case MessageEnvelope(entityId, payload) =>
-                                payload match {
-                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
-                                  case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
-                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
-                                }
+                            extractEntityId = { case MessageEnvelope(entityId, payload) =>
+                              payload match {
+                                case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
+                                case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
+                              }
                             },
-                            extractShardId = {
-                              case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
+                            extractShardId = { case msg: MessageEnvelope =>
+                              (math.abs(msg.entityId.hashCode) % numberOfShards).toString
                             }
                           )
                         )
@@ -91,16 +90,15 @@ object Sharding {
                           ClusterSharding(actorSystem).startProxy(
                             typeName = name,
                             role,
-                            extractEntityId = {
-                              case MessageEnvelope(entityId, payload) =>
-                                payload match {
-                                  case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
-                                  case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
-                                  case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
-                                }
+                            extractEntityId = { case MessageEnvelope(entityId, payload) =>
+                              payload match {
+                                case MessageEnvelope.PoisonPillPayload    => (entityId, PoisonPill)
+                                case MessageEnvelope.PassivatePayload     => (entityId, Passivate(PoisonPill))
+                                case p: MessageEnvelope.MessagePayload[_] => (entityId, p)
+                              }
                             },
-                            extractShardId = {
-                              case msg: MessageEnvelope => (math.abs(msg.entityId.hashCode) % numberOfShards).toString
+                            extractShardId = { case msg: MessageEnvelope =>
+                              (math.abs(msg.entityId.hashCode) % numberOfShards).toString
                             }
                           )
                         )
