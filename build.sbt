@@ -76,7 +76,7 @@ lazy val `zio-akka-cluster` = project
       "com.typesafe.akka" %% "akka-cluster-sharding" % akkaVersion,
       "dev.zio"           %% "zio-test"              % zioVersion % "test",
       "dev.zio"           %% "zio-test-sbt"          % zioVersion % "test",
-      compilerPlugin("org.typelevel" %% "kind-projector"     % "0.13.2" cross CrossVersion.full),
+      compilerPlugin("org.typelevel" %% "kind-projector"     % "0.13.3" cross CrossVersion.full),
       compilerPlugin("com.olegpy"    %% "better-monadic-for" % "0.3.1")
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
