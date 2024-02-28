@@ -1,7 +1,7 @@
 import sbt.Project.projectToLocalProject
 
 val mainScala = "2.13.7"
-val allScala  = Seq("2.12.15", mainScala)
+val allScala  = Seq("2.12.19", mainScala)
 
 val zioVersion  = "2.0.0"
 val akkaVersion = "2.6.19"
